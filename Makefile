@@ -7,7 +7,7 @@ KDIR ?= /lib/modules/${KVER}/build
 MKFS = mkfs.simplefs
 
 all: $(MKFS)
-	make -C $(KDIR) M=$(PWD) modules
+	make -C $(KDIR) M=$(PWD) modules V=0
 
 IMAGE ?= test.img
 IMAGESIZE ?= 200

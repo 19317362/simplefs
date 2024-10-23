@@ -1,24 +1,32 @@
-
-
 add_requires("linux-headers", {configs = {driver_modules = true}})
 -- Kernel directory and current working directory
--- local KDIR = os.getenv("KDIR") or "/lib/modules/$(shell uname -r)/build"
+local KDIR = "/usr/src/linux-headers-6.8.0-47-generic"
 -- local PWD = os.curdir()
 
 -- Define the target for the kernel module
 target("simplefs")
     add_rules("platform.linux.driver")
     add_files("fs.c","super.c","inode.c","file.c","dir.c","extent.c")
-    -- add_includedirs(KDIR .. "/include")
-    add_cflags("-std=gnu99", "-Wall")
-    add_packages("linux-headers")
+    add_cflags("-std=gnu99", "-Wall", "-nostdinc")
+    add_defines("__KERNEL__")
+    add_cflags("-include " .. path.join(KDIR, "include/linux/compiler-version.h"))
+    add_cflags("-include " .. path.join(KDIR, "include/linux/kconfig.h"))
+    add_cflags("-I" .. path.join(KDIR, "arch/x86/include"))
+    add_cflags("-I" .. path.join(KDIR, "arch/x86/include/generated"))
+    add_cflags("-I" .. path.join(KDIR, "include"))
+    add_cflags("-I" .. path.join(KDIR, "arch/x86/include/uapi"))
+    add_cflags("-I" .. path.join(KDIR, "arch/x86/include/generated/uapi"))
+    add_cflags("-I" .. path.join(KDIR, "include/uapi"))
+    add_cflags("-I" .. path.join(KDIR, "include/generated/uapi"))
+    add_cflags("-I" .. path.join(KDIR, "ubuntu/include"))
+    add_cflags("-include " .. path.join(KDIR, "include/linux/compiler_types.h"))
+    set_values("linux.driver.linux-headers", KDIR)
 
 -- Define the target for mkfs.simplefs
 -- target("mkfs.simplefs")
 --     set_kind("binary")
 --     add_files("mkfs.c")
 --     add_cflags("-std=gnu99", "-Wall")
-
 
 -- Define the task to create the image
 task("create_image")
