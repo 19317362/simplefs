@@ -15,6 +15,7 @@ int main()
     struct sockaddr_nl src_addr, dest_addr;
     struct iovec iov;
     struct msghdr msg;
+    char input[MAX_PAYLOAD];
 
     // Custom deleter for shared_ptr to close the socket
     auto socket_deleter = [](int* sock_fd) {
@@ -61,34 +62,52 @@ int main()
         printf("malloc failed\n");
         return -1;
     }
-    memset(nlh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
-    nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
-    nlh->nlmsg_pid = getpid();
-    nlh->nlmsg_flags = 0;
 
-    strcpy((char *)NLMSG_DATA(nlh.get()), "Hello from user");
+    while (1) {
+        printf("Enter command (q to quit, s<message> to send): ");
+        if (!fgets(input, sizeof(input), stdin)) {
+            printf("Error reading input\n");
+            continue;
+        }
 
-    iov.iov_base = (void *)nlh.get();
-    iov.iov_len = nlh->nlmsg_len;
-    memset(&msg, 0, sizeof(msg));
-    msg.msg_name = (void *)&dest_addr;
-    msg.msg_namelen = sizeof(dest_addr);
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
+        // Remove newline character from input
+        input[strcspn(input, "\n")] = 0;
 
-    rc = sendmsg(*sock_fd, &msg, 0);
-    if (rc < 0) {
-        printf("sendmsg failed: %d %s\n", rc, strerror(errno));
-        return -1;
+        if (input[0] == 'q') {
+            break;
+        } else if (input[0] == 's') {
+            const char *message = input + 1; // Skip the 's' character
+
+            memset(nlh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
+            nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
+            nlh->nlmsg_pid = getpid();
+            nlh->nlmsg_flags = 0;
+
+            strncpy((char *)NLMSG_DATA(nlh.get()), message, MAX_PAYLOAD - NLMSG_HDRLEN);
+
+            iov.iov_base = (void *)nlh.get();
+            iov.iov_len = nlh->nlmsg_len;
+            memset(&msg, 0, sizeof(msg));
+            msg.msg_name = (void *)&dest_addr;
+            msg.msg_namelen = sizeof(dest_addr);
+            msg.msg_iov = &iov;
+            msg.msg_iovlen = 1;
+
+            rc = sendmsg(*sock_fd, &msg, 0);
+            if (rc < 0) {
+                printf("sendmsg failed: %d %s\n", rc, strerror(errno));
+                continue;
+            }
+
+            /* Read message from kernel */
+            rc = recvmsg(*sock_fd, &msg, 0);
+            if (rc < 0) {
+                printf("recvmsg failed: %d %s\n", rc, strerror(errno));
+                continue;
+            }
+            printf("Received message payload: %s\n", (char *)NLMSG_DATA(nlh.get()));
+        }
     }
-
-    /* Read message from kernel */
-    rc = recvmsg(*sock_fd, &msg, 0);
-    if (rc < 0) {
-        printf("recvmsg failed: %d %s\n", rc, strerror(errno));
-        return -1;
-    }
-    printf("Received message payload: %s\n", (char *)NLMSG_DATA(nlh.get()));
 
     return 0;
 }
