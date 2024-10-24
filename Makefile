@@ -1,10 +1,10 @@
-obj-m += simplefs.o
-simplefs-objs := fs.o super.o inode.o file.o dir.o extent.o
+obj-m += dxrfs.o
+dxrfs-objs := fs.o super.o inode.o file.o dir.o extent.o
 #KVER = '6.8.0-47-generic'
 KVER = $(shell uname -r)
 KDIR ?= /lib/modules/${KVER}/build
 
-MKFS = mkfs.simplefs
+MKFS = mkfs.dxrfs
 
 all: $(MKFS)
 	make -C $(KDIR) M=$(PWD) modules V=0
