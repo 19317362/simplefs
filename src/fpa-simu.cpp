@@ -13,7 +13,6 @@
 int main()
 {
     struct sockaddr_nl src_addr, dest_addr;
-    struct nlmsghdr *nlh = NULL;
     struct iovec iov;
     struct msghdr msg;
 
@@ -48,19 +47,28 @@ int main()
     dest_addr.nl_pid = 0; /* For Linux Kernel */
     dest_addr.nl_groups = 0; /* unicast */
 
-    nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+    // Custom deleter for shared_ptr to free the allocated memory
+    auto nlh_deleter = [](struct nlmsghdr* nlh) {
+        if (nlh) {
+            free(nlh);
+            printf("Memory freed\n");
+        }
+    };
+
+    // Create a shared_ptr with custom deleter for nlmsghdr
+    std::shared_ptr<struct nlmsghdr> nlh((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)), nlh_deleter);
     if (!nlh) {
         printf("malloc failed\n");
         return -1;
     }
-    memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
+    memset(nlh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
     nlh->nlmsg_len = NLMSG_SPACE(MAX_PAYLOAD);
     nlh->nlmsg_pid = getpid();
     nlh->nlmsg_flags = 0;
 
-    strcpy((char *)NLMSG_DATA(nlh), "Hello from user");
+    strcpy((char *)NLMSG_DATA(nlh.get()), "Hello from user");
 
-    iov.iov_base = (void *)nlh;
+    iov.iov_base = (void *)nlh.get();
     iov.iov_len = nlh->nlmsg_len;
     memset(&msg, 0, sizeof(msg));
     msg.msg_name = (void *)&dest_addr;
@@ -71,7 +79,6 @@ int main()
     rc = sendmsg(*sock_fd, &msg, 0);
     if (rc < 0) {
         printf("sendmsg failed: %d %s\n", rc, strerror(errno));
-        free(nlh);
         return -1;
     }
 
@@ -79,11 +86,9 @@ int main()
     rc = recvmsg(*sock_fd, &msg, 0);
     if (rc < 0) {
         printf("recvmsg failed: %d %s\n", rc, strerror(errno));
-        free(nlh);
         return -1;
     }
-    printf("Received message payload: %s\n", (char *)NLMSG_DATA(nlh));
+    printf("Received message payload: %s\n", (char *)NLMSG_DATA(nlh.get()));
 
-    free(nlh);
     return 0;
 }
