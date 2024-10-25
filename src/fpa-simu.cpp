@@ -208,11 +208,12 @@ int main() {
                 int message_len = strlen(message);
 
                 netlink_comm.send_message(message, message_len);
+                auto future = netlink_comm.receive_message().future;
+                future.wait();
+                std::cout << "Received message payload: " << future.get() << std::endl;                
             }
 
-            auto future = netlink_comm.receive_message().future;
-            future.wait();
-            std::cout << "Received message payload: " << future.get() << std::endl;
+
         }
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
