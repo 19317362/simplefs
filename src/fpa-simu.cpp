@@ -1,3 +1,5 @@
+#include <coroutine>
+#include <future>
 #include <iostream>
 #include <memory>
 #include <cstring>
@@ -12,6 +14,34 @@
 #define NETLINK_USER 31
 #define MAX_PAYLOAD 1024 /* maximum payload size*/
 #define MAX_EVENTS 10
+
+template<typename T>
+struct Awaitable {
+    struct promise_type {
+        std::promise<T> promise;
+
+        Awaitable get_return_object() {
+            return Awaitable{promise.get_future()};
+        }
+
+        std::suspend_never initial_suspend() { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+
+        void return_value(T value) {
+            promise.set_value(value);
+        }
+
+        void unhandled_exception() {
+            promise.set_exception(std::current_exception());
+        }
+    };
+
+    std::future<T> future;
+
+    bool await_ready() { return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready; }
+    void await_suspend(std::coroutine_handle<>) { }
+    T await_resume() { return future.get(); }
+};
 
 class NetlinkCommunicator {
 public:
@@ -104,7 +134,7 @@ public:
         }
     }
 
-    void receive_message() {
+    Awaitable<std::string> receive_message() {
         struct epoll_event events[MAX_EVENTS];
         int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
         if (nfds < 0) {
@@ -144,9 +174,10 @@ public:
                 if (rc < 0) {
                     throw std::runtime_error("recvmsg failed: " + std::string(strerror(errno)));
                 }
-                std::cout << "Received message payload: " << (char *)NLMSG_DATA(nlh.get()) << std::endl;
+                co_return std::string((char *)NLMSG_DATA(nlh.get()));
             }
         }
+        co_return "";
     }
 
 private:
@@ -179,7 +210,9 @@ int main() {
                 netlink_comm.send_message(message, message_len);
             }
 
-            netlink_comm.receive_message();
+            auto future = netlink_comm.receive_message().future;
+            future.wait();
+            std::cout << "Received message payload: " << future.get() << std::endl;
         }
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
