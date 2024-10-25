@@ -5,13 +5,13 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <errno.h>
-#include <coroutine>
-#include <future>
+#include <sys/epoll.h>
 
 #include "dxrfs_msg.h"
 
 #define NETLINK_USER 31
 #define MAX_PAYLOAD 1024 /* maximum payload size*/
+#define MAX_EVENTS 10
 
 class NetlinkCommunicator {
 public:
@@ -26,7 +26,7 @@ public:
         };
 
         // Create a shared_ptr with custom deleter
-        sock_fd = std::shared_ptr<int>(new int(socket(PF_NETLINK, SOCK_RAW, NETLINK_USER)), socket_deleter);
+        sock_fd = std::shared_ptr<int>(new int(socket(PF_NETLINK, SOCK_RAW | SOCK_NONBLOCK, NETLINK_USER)), socket_deleter);
         if (*sock_fd < 0) {
             throw std::runtime_error("socket creation failed: " + std::string(strerror(errno)));
         }
@@ -44,38 +44,27 @@ public:
         dest_addr.nl_family = AF_NETLINK;
         dest_addr.nl_pid = 0; /* For Linux Kernel */
         dest_addr.nl_groups = 0; /* unicast */
+
+        // Create epoll instance
+        epoll_fd = epoll_create1(0);
+        if (epoll_fd < 0) {
+            throw std::runtime_error("epoll_create1 failed: " + std::string(strerror(errno)));
+        }
+
+        // Add Netlink socket to epoll
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = *sock_fd;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, *sock_fd, &ev) < 0) {
+            throw std::runtime_error("epoll_ctl failed: " + std::string(strerror(errno)));
+        }
     }
 
-    struct Task {
-        struct promise_type {
-            std::promise<void> promise;
+    ~NetlinkCommunicator() {
+        close(epoll_fd);
+    }
 
-            Task get_return_object() {
-                return Task{promise.get_future()};
-            }
-
-            std::suspend_never initial_suspend() {
-                return {};
-            }
-
-            std::suspend_never final_suspend() noexcept {
-                promise.set_value();
-                return {};
-            }
-
-            void return_void() {}
-
-            void unhandled_exception() {
-                promise.set_exception(std::current_exception());
-            }
-        };
-
-        std::future<void> future;
-
-        Task(std::future<void>&& future) : future(std::move(future)) {}
-    };
-
-    Task send_message(const char* message, int message_len) {
+    void send_message(const char* message, int message_len) {
         struct iovec iov;
         struct msghdr msg;
         int rc;
@@ -113,20 +102,57 @@ public:
         if (rc < 0) {
             throw std::runtime_error("sendmsg failed: " + std::string(strerror(errno)));
         }
+    }
 
-        /* Read message from kernel */
-        rc = recvmsg(*sock_fd, &msg, 0);
-        if (rc < 0) {
-            throw std::runtime_error("recvmsg failed: " + std::string(strerror(errno)));
+    void receive_message() {
+        struct epoll_event events[MAX_EVENTS];
+        int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        if (nfds < 0) {
+            throw std::runtime_error("epoll_wait failed: " + std::string(strerror(errno)));
         }
-        std::cout << "Received message payload: " << (char *)NLMSG_DATA(nlh.get()) << std::endl;
 
-        co_return;
+        for (int n = 0; n < nfds; ++n) {
+            if (events[n].data.fd == *sock_fd) {
+                struct iovec iov;
+                struct msghdr msg;
+                int rc;
+
+                // Custom deleter for shared_ptr to free the allocated memory
+                auto nlh_deleter = [](struct nlmsghdr* nlh) {
+                    if (nlh) {
+                        free(nlh);
+                        std::cout << "Memory freed" << std::endl;
+                    }
+                };
+
+                // Create a shared_ptr with custom deleter for nlmsghdr
+                std::shared_ptr<struct nlmsghdr> nlh((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)), nlh_deleter);
+                if (!nlh) {
+                    throw std::runtime_error("malloc failed");
+                }
+
+                memset(nlh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
+                iov.iov_base = (void *)nlh.get();
+                iov.iov_len = NLMSG_SPACE(MAX_PAYLOAD);
+                memset(&msg, 0, sizeof(msg));
+                msg.msg_name = (void *)&dest_addr;
+                msg.msg_namelen = sizeof(dest_addr);
+                msg.msg_iov = &iov;
+                msg.msg_iovlen = 1;
+
+                rc = recvmsg(*sock_fd, &msg, 0);
+                if (rc < 0) {
+                    throw std::runtime_error("recvmsg failed: " + std::string(strerror(errno)));
+                }
+                std::cout << "Received message payload: " << (char *)NLMSG_DATA(nlh.get()) << std::endl;
+            }
+        }
     }
 
 private:
     std::shared_ptr<int> sock_fd;
     struct sockaddr_nl src_addr, dest_addr;
+    int epoll_fd;
 };
 
 int main() {
@@ -150,9 +176,10 @@ int main() {
                 const char *message = input + 1; // Skip the 's' character
                 int message_len = strlen(message);
 
-                auto task = netlink_comm.send_message(message, message_len);
-                task.future.get(); // Wait for the coroutine to complete
+                netlink_comm.send_message(message, message_len);
             }
+
+            netlink_comm.receive_message();
         }
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
