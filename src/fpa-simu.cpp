@@ -7,6 +7,8 @@
 #include <memory>
 #include <errno.h>
 
+#include "dxrfs_msg.h"
+
 #define NETLINK_USER 31
 #define MAX_PAYLOAD 1024 /* maximum payload size*/
 
