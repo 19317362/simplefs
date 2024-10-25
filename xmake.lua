@@ -3,6 +3,8 @@
 -- local KDIR = "/usr/src/linux-headers-6.8.0-47-generic"
 -- local PWD = os.curdir()
 
+-- 使用C++20
+set_languages("cxx20")
 -- src 目录下的 fpa-simu.c 生成 fpa-simu 可执行程序, 模拟 fpa,开发时使用
 target("fpa-simu")
     set_kind("binary")

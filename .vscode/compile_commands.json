@@ -1,6 +1,6 @@
 [
 {
   "directory": "/work/simplefs",
-  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-o", "build/.objs/fpa-simu/linux/x86_64/release/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-std=c++20", "-o", "build/.objs/fpa-simu/linux/x86_64/release/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
   "file": "src/fpa-simu.cpp"
 }]
