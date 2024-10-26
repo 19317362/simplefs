@@ -20,8 +20,8 @@ asio::awaitable<void> run_netlink_communicator(std::shared_ptr<NetlinkCommunicat
             int message_len = strlen(message);
 
             netlink_comm->send_message(message, message_len);
-            std::string received_message = co_await netlink_comm->receive_message();
-            std::cout << "Received message payload: " << received_message << std::endl;
+            //std::string received_message = co_await netlink_comm->receive_message();
+            //std::cout << "Received message payload: " << received_message << std::endl;
         }
     }
 }
@@ -30,7 +30,8 @@ int main() {
     try {
         asio::io_context io_context;
         auto netlink_comm = std::make_shared<NetlinkCommunicator>(io_context);
-
+        netlink_comm->start_receive();
+        // Keep the shared_ptr alive until io_context.run() completes
         asio::co_spawn(io_context, run_netlink_communicator(netlink_comm), asio::detached);
 
         io_context.run();

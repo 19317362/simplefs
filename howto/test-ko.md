@@ -1,9 +1,9 @@
 ### Step 1: keep-watch-ing
 
 ```
-sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 MOK.priv MOK.der dxrfs.ko
+sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 MOK.priv MOK.der ./build/dxrfs.ko
 
-sudo insmod dxrfs.ko
+sudo insmod ./build/dxrfs.ko
 sudo dmesg -w | grep dxrfs
 ```
 

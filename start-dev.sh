@@ -3,5 +3,5 @@ docker run \
 -it --privileged \
 -v $PWD:/home/wps/simplefs \
 -w /home/wps/simplefs \
-simplefs-debug \
+dxrfs \
 bash

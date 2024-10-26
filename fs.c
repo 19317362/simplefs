@@ -8,24 +8,20 @@
 #include <linux/skbuff.h>
 #include <net/sock.h>
 
+#include <linux/timer.h>
+
 #define NETLINK_USER 31
 
 struct sock *nl_sk = NULL;
 #include "simplefs.h"
 
-//netlink ++++
-static void nl_recv_msg(struct sk_buff *skb)
+// Function to send netlink message
+static void send_netlink_message(char *msg, int pid)
 {
-    struct nlmsghdr *nlh;
-    int pid;
     struct sk_buff *skb_out;
+    struct nlmsghdr *nlh;
     int msg_size;
-    char *msg = "Hello from kernel";
     int res;
-
-    nlh = (struct nlmsghdr *)skb->data;
-    pr_info("Kernel received msg payload: %s\n", (char *)nlmsg_data(nlh));
-    pid = nlh->nlmsg_pid; /*pid of sending process */
 
     msg_size = strlen(msg);
 
@@ -43,12 +39,48 @@ static void nl_recv_msg(struct sk_buff *skb)
     if (res < 0)
         pr_err("Error while sending back to user\n");
 }
+
+// timer ++++
+
+static struct timer_list my_timer;
+static void my_timer_callback(struct timer_list *timer);
+
+static void my_timer_callback(struct timer_list *timer)
+{
+    char *msg = "Periodic message from kernel";
+    int pid = 0; // Replace with the actual PID if needed
+
+    send_netlink_message(msg, pid);
+
+    // Restart the timer
+    mod_timer(&my_timer, jiffies + msecs_to_jiffies(10000));
+}
+
+//timer ----
+
+//netlink ++++
+static void nl_recv_msg(struct sk_buff *skb)
+{
+    struct nlmsghdr *nlh;
+    int pid;
+    char *msg = "Hello from kernel";
+
+    nlh = (struct nlmsghdr *)skb->data;
+    pr_info("Kernel received msg payload: %s\n", (char *)nlmsg_data(nlh));
+    pid = nlh->nlmsg_pid; /*pid of sending process */
+
+    send_netlink_message(msg, pid);
+}
+
 static int nl_init(void)
 {
     struct netlink_kernel_cfg cfg = {
         .input = nl_recv_msg,
     };
-
+    // Initialize and start the timer
+    timer_setup(&my_timer, my_timer_callback, 0);
+    mod_timer(&my_timer, jiffies + msecs_to_jiffies(10000));
+    
     nl_sk = netlink_kernel_create(&init_net, NETLINK_USER, &cfg);
     if (!nl_sk) {
         pr_err("Error creating socket.\n");
@@ -58,8 +90,12 @@ static int nl_init(void)
     pr_info("NL initialized\n");
     return 0;
 }
+
 static void nl_release(void)
 {
+    // Delete the timer
+    del_timer(&my_timer);
+        
     if (nl_sk != NULL){
         netlink_kernel_release(nl_sk);
         nl_sk = NULL;
@@ -67,6 +103,7 @@ static void nl_release(void)
     }
 
 }
+
 //netlink ----
 
 /* Mount a simplefs partition */

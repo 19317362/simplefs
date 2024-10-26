@@ -26,13 +26,13 @@ public:
 
     void send_message(const char* message, int message_len);
     asio::awaitable<std::string> receive_message();
-
-private:
     void start_receive();
+private:
+    void DoReceive(std::string& message);
 
     asio::io_context& io_context_;
     asio::posix::stream_descriptor socket_;
-    std::shared_ptr<int> sock_fd;
+    int sock_fd;
     struct sockaddr_nl src_addr, dest_addr;
     std::atomic<bool> stop_thread;
     std::mutex sock_mutex;

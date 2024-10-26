@@ -3,6 +3,11 @@
 -- local KDIR = "/usr/src/linux-headers-6.8.0-47-generic"
 -- local PWD = os.curdir()
 add_rules("mode.debug", "mode.release")
+-- Set the default mode to debug
+set_defaultmode("debug")
+
+
+
 -- 使用C++20
 set_languages("cxx20")
 
