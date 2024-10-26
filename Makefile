@@ -6,9 +6,21 @@ KDIR ?= /lib/modules/${KVER}/build
 
 MKFS = mkfs.dxrfs
 
-all: $(MKFS)
-	make -C $(KDIR) M=$(PWD) modules V=0
+# https://stackoverflow.com/questions/12244979/build-kernel-module-into-a-specific-directory
+# change .o .mod.c .mod.o .ko .mod ... files to ./build directory
+BUILD_DIR := $(PWD)/build
+BUILD_DIR_MAKEFILE := $(BUILD_DIR)/Makefile
 
+
+all: $(MKFS) $(BUILD_DIR_MAKEFILE)
+	make -C $(KDIR) M=$(BUILD_DIR) src=$(PWD) modules V=0
+
+$(BUILD_DIR):
+	mkdir -p "$@"
+
+$(BUILD_DIR_MAKEFILE): $(BUILD_DIR)
+	touch "$@"
+	
 IMAGE ?= test.img
 IMAGESIZE ?= 200
 JOURNAL ?= journal.img
@@ -34,7 +46,7 @@ check: all
 	script/test.sh $(IMAGE) $(IMAGESIZE) $(MKFS)
 
 clean:
-	make -C $(KDIR) M=$(PWD) clean
+	make -C $(KDIR) M=$(BUILD_DIR) src=$(PWD) clean
 	rm -f *~ $(PWD)/*.ur-safe
 	rm -f $(MKFS) $(IMAGE) $(JOURNAL)
 
