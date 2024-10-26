@@ -8,6 +8,10 @@
 #include <linux/netlink.h>
 #include <errno.h>
 #include <sys/epoll.h>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <optional>
 
 #include "dxrfs_msg.h"
 
@@ -45,7 +49,7 @@ struct Awaitable {
 
 class NetlinkCommunicator {
 public:
-    NetlinkCommunicator() {
+    NetlinkCommunicator() : stop_thread(false) {
         // Custom deleter for shared_ptr to close the socket
         auto socket_deleter = [](int* sock_fd) {
             if (sock_fd && *sock_fd >= 0) {
@@ -97,6 +101,16 @@ public:
         if (epoll_ctl(*epoll_fd, EPOLL_CTL_ADD, *sock_fd, &ev) < 0) {
             throw std::runtime_error("epoll_ctl failed: " + std::string(strerror(errno)));
         }
+
+        // Start the thread
+        epoll_thread = std::thread(&NetlinkCommunicator::epoll_loop, this);
+    }
+
+    ~NetlinkCommunicator() {
+        stop_thread = true;
+        if (epoll_thread.joinable()) {
+            epoll_thread.join();
+        }
     }
 
     void send_message(const char* message, int message_len) {
@@ -140,55 +154,77 @@ public:
     }
 
     Awaitable<std::string> receive_message() {
-        struct epoll_event events[MAX_EVENTS];
-        int nfds = epoll_wait(*epoll_fd, events, MAX_EVENTS, -1);
-        if (nfds < 0) {
-            throw std::runtime_error("epoll_wait failed: " + std::string(strerror(errno)));
+        std::promise<std::string> promise;
+        auto future = promise.get_future();
+        {
+            std::lock_guard<std::mutex> lock(promise_mutex);
+            message_promise = std::move(promise);
         }
-
-        for (int n = 0; n < nfds; ++n) {
-            if (events[n].data.fd == *sock_fd) {
-                struct iovec iov;
-                struct msghdr msg;
-                int rc;
-
-                // Custom deleter for shared_ptr to free the allocated memory
-                auto nlh_deleter = [](struct nlmsghdr* nlh) {
-                    if (nlh) {
-                        free(nlh);
-                        std::cout << "Memory freed" << std::endl;
-                    }
-                };
-
-                // Create a shared_ptr with custom deleter for nlmsghdr
-                std::shared_ptr<struct nlmsghdr> nlh((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)), nlh_deleter);
-                if (!nlh) {
-                    throw std::runtime_error("malloc failed");
-                }
-
-                memset(nlh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
-                iov.iov_base = (void *)nlh.get();
-                iov.iov_len = NLMSG_SPACE(MAX_PAYLOAD);
-                memset(&msg, 0, sizeof(msg));
-                msg.msg_name = (void *)&dest_addr;
-                msg.msg_namelen = sizeof(dest_addr);
-                msg.msg_iov = &iov;
-                msg.msg_iovlen = 1;
-
-                rc = recvmsg(*sock_fd, &msg, 0);
-                if (rc < 0) {
-                    throw std::runtime_error("recvmsg failed: " + std::string(strerror(errno)));
-                }
-                co_return std::string((char *)NLMSG_DATA(nlh.get()));
-            }
-        }
-        co_return "";
+        return Awaitable<std::string>{std::move(future)};
     }
 
 private:
+    void epoll_loop() {
+        while (!stop_thread) {
+            struct epoll_event events[MAX_EVENTS];
+            int nfds = epoll_wait(*epoll_fd, events, MAX_EVENTS, 1000); // 1 second timeout
+            if (nfds < 0) {
+                if (errno == EINTR) continue; // Interrupted by signal, retry
+                throw std::runtime_error("epoll_wait failed: " + std::string(strerror(errno)));
+            }
+
+            for (int n = 0; n < nfds; ++n) {
+                if (events[n].data.fd == *sock_fd) {
+                    struct iovec iov;
+                    struct msghdr msg;
+                    int rc;
+
+                    // Custom deleter for shared_ptr to free the allocated memory
+                    auto nlh_deleter = [](struct nlmsghdr* nlh) {
+                        if (nlh) {
+                            free(nlh);
+                            std::cout << "Memory freed" << std::endl;
+                        }
+                    };
+
+                    // Create a shared_ptr with custom deleter for nlmsghdr
+                    std::shared_ptr<struct nlmsghdr> nlh((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)), nlh_deleter);
+                    if (!nlh) {
+                        throw std::runtime_error("malloc failed");
+                    }
+
+                    memset(nlh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
+                    iov.iov_base = (void *)nlh.get();
+                    iov.iov_len = NLMSG_SPACE(MAX_PAYLOAD);
+                    memset(&msg, 0, sizeof(msg));
+                    msg.msg_name = (void *)&dest_addr;
+                    msg.msg_namelen = sizeof(dest_addr);
+                    msg.msg_iov = &iov;
+                    msg.msg_iovlen = 1;
+
+                    rc = recvmsg(*sock_fd, &msg, 0);
+                    if (rc < 0) {
+                        throw std::runtime_error("recvmsg failed: " + std::string(strerror(errno)));
+                    }
+
+                    std::string received_message((char *)NLMSG_DATA(nlh.get()));
+                    std::lock_guard<std::mutex> lock(promise_mutex);
+                    if (message_promise) {
+                        message_promise->set_value(received_message);
+                        message_promise.reset();
+                    }
+                }
+            }
+        }
+    }
+
     std::shared_ptr<int> sock_fd;
     std::shared_ptr<int> epoll_fd;
     struct sockaddr_nl src_addr, dest_addr;
+    std::thread epoll_thread;
+    std::atomic<bool> stop_thread;
+    std::mutex promise_mutex;
+    std::optional<std::promise<std::string>> message_promise;
 };
 
 int main() {
