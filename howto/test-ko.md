@@ -1,6 +1,9 @@
 ### Step 1: keep-watch-ing
 
 ```
+disable dkms
+https://wiki.ubuntu.com/UEFI/SecureBoot/DKMS
+
 sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 MOK.priv MOK.der ./build/dxrfs.ko
 
 sudo insmod ./build/dxrfs.ko

@@ -13,6 +13,7 @@
 #define NETLINK_USER 31
 
 struct sock *nl_sk = NULL;
+static int last_pid = 0;//last client pid
 #include "simplefs.h"
 
 // Function to send netlink message
@@ -47,11 +48,12 @@ static void my_timer_callback(struct timer_list *timer);
 
 static void my_timer_callback(struct timer_list *timer)
 {
-    char *msg = "Periodic message from kernel";
-    int pid = 0; // Replace with the actual PID if needed
-
-    send_netlink_message(msg, pid);
-
+    //char *msg = "Periodic message from kernel";
+    //int pid = 0; // Replace with the actual PID if needed
+    pr_info("timer expired %p. pid:%d\n",timer, last_pid);
+    if(last_pid != 0){
+        send_netlink_message("Periodic message from kernel", last_pid);
+    }
     // Restart the timer
     mod_timer(&my_timer, jiffies + msecs_to_jiffies(10000));
 }
@@ -66,9 +68,10 @@ static void nl_recv_msg(struct sk_buff *skb)
     char *msg = "Hello from kernel";
 
     nlh = (struct nlmsghdr *)skb->data;
-    pr_info("Kernel received msg payload: %s\n", (char *)nlmsg_data(nlh));
     pid = nlh->nlmsg_pid; /*pid of sending process */
+    pr_info("Kernel RX from %d: %s\n",pid, (char *)nlmsg_data(nlh));
 
+    last_pid = pid;
     send_netlink_message(msg, pid);
 }
 

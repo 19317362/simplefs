@@ -20,8 +20,8 @@ asio::awaitable<void> run_netlink_communicator(std::shared_ptr<NetlinkCommunicat
             int message_len = strlen(message);
 
             netlink_comm->send_message(message, message_len);
-            //std::string received_message = co_await netlink_comm->receive_message();
-            //std::cout << "Received message payload: " << received_message << std::endl;
+            std::string received_message = co_await netlink_comm->receive_message();
+            std::cout << "Received message payload: " << received_message << std::endl;
         }
     }
 }

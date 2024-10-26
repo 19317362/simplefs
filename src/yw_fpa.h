@@ -29,6 +29,7 @@ public:
     void start_receive();
 private:
     void DoReceive(std::string& message);
+    void epoll_thread_func();
 
     asio::io_context& io_context_;
     asio::posix::stream_descriptor socket_;
@@ -38,4 +39,5 @@ private:
     std::mutex sock_mutex;
     std::mutex promise_mutex;
     std::optional<std::promise<std::string>> message_promise;
+    std::thread epoll_thread_;
 };

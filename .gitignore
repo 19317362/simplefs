@@ -58,3 +58,7 @@ dkms.conf
 test.img
 .xmake/
 build/
+cmake-build-debug/
+.idea/
+.vscode/
+CMakeLists.txt
