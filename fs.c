@@ -38,7 +38,10 @@ static void send_netlink_message(char *msg, int pid)
 
     res = nlmsg_unicast(nl_sk, skb_out, pid);
     if (res < 0)
+    {
         pr_err("Error while sending back to user\n");
+        last_pid = 0;
+    }
 }
 
 // timer ++++
