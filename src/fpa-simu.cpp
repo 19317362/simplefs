@@ -114,6 +114,8 @@ public:
     }
 
     void send_message(const char* message, int message_len) {
+        std::lock_guard<std::mutex> lock(sock_mutex);
+
         struct iovec iov;
         struct msghdr msg;
         int rc;
@@ -175,6 +177,8 @@ private:
 
             for (int n = 0; n < nfds; ++n) {
                 if (events[n].data.fd == *sock_fd) {
+                    //std::lock_guard<std::mutex> sock_lock(sock_mutex); // Not needed as we are not sending messages in this thread
+
                     struct iovec iov;
                     struct msghdr msg;
                     int rc;
@@ -223,6 +227,7 @@ private:
     struct sockaddr_nl src_addr, dest_addr;
     std::thread epoll_thread;
     std::atomic<bool> stop_thread;
+    std::mutex sock_mutex;
     std::mutex promise_mutex;
     std::optional<std::promise<std::string>> message_promise;
 };
