@@ -1,6 +1,7 @@
 #include "yw_fpa.h"
 
-NetlinkCommunicator::NetlinkCommunicator() : stop_thread(false) {
+NetlinkCommunicator::NetlinkCommunicator(asio::io_context& io_context)
+    : io_context_(io_context), socket_(io_context), stop_thread(false) {
     // Custom deleter for shared_ptr to close the socket
     auto socket_deleter = [](int* sock_fd) {
         if (sock_fd && *sock_fd >= 0) {
@@ -30,38 +31,15 @@ NetlinkCommunicator::NetlinkCommunicator() : stop_thread(false) {
     dest_addr.nl_pid = 0; /* For Linux Kernel */
     dest_addr.nl_groups = 0; /* unicast */
 
-    // Custom deleter for shared_ptr to close the epoll file descriptor
-    auto epoll_deleter = [](int* epoll_fd) {
-        if (epoll_fd && *epoll_fd >= 0) {
-            close(*epoll_fd);
-            std::cout << "Epoll fd closed" << std::endl;
-        }
-        delete epoll_fd;
-    };
+    socket_.assign(*sock_fd);
 
-    // Create a shared_ptr with custom deleter for epoll file descriptor
-    epoll_fd = std::shared_ptr<int>(new int(epoll_create1(0)), epoll_deleter);
-    if (*epoll_fd < 0) {
-        throw std::runtime_error("epoll_create1 failed: " + std::string(strerror(errno)));
-    }
-
-    // Add Netlink socket to epoll
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = *sock_fd;
-    if (epoll_ctl(*epoll_fd, EPOLL_CTL_ADD, *sock_fd, &ev) < 0) {
-        throw std::runtime_error("epoll_ctl failed: " + std::string(strerror(errno)));
-    }
-
-    // Start the thread
-    epoll_thread = std::thread(&NetlinkCommunicator::epoll_loop, this);
+    // Start receiving messages
+    start_receive();
 }
 
 NetlinkCommunicator::~NetlinkCommunicator() {
     stop_thread = true;
-    if (epoll_thread.joinable()) {
-        epoll_thread.join();
-    }
+    socket_.close();
 }
 
 void NetlinkCommunicator::send_message(const char* message, int message_len) {
@@ -106,29 +84,23 @@ void NetlinkCommunicator::send_message(const char* message, int message_len) {
     }
 }
 
-Awaitable<std::string> NetlinkCommunicator::receive_message() {
+asio::awaitable<std::string> NetlinkCommunicator::receive_message() {
     std::promise<std::string> promise;
     auto future = promise.get_future();
     {
         std::lock_guard<std::mutex> lock(promise_mutex);
         message_promise = std::move(promise);
     }
-    return Awaitable<std::string>{std::move(future)};
+    co_return co_await asio::co_spawn(io_context_, [this, future = std::move(future)]() mutable -> asio::awaitable<std::string> {
+        co_return future.get();
+    }, asio::use_awaitable);
 }
 
-void NetlinkCommunicator::epoll_loop() {
-    while (!stop_thread) {
-        struct epoll_event events[MAX_EVENTS];
-        int nfds = epoll_wait(*epoll_fd, events, MAX_EVENTS, 1000); // 1 second timeout
-        if (nfds < 0) {
-            if (errno == EINTR) continue; // Interrupted by signal, retry
-            throw std::runtime_error("epoll_wait failed: " + std::string(strerror(errno)));
-        }
-
-        for (int n = 0; n < nfds; ++n) {
-            if (events[n].data.fd == *sock_fd) {
-                //std::lock_guard<std::mutex> sock_lock(sock_mutex); // Not needed as we are not sending messages in this thread
-
+void NetlinkCommunicator::start_receive() {
+    auto self(shared_from_this());
+    socket_.async_wait(asio::posix::stream_descriptor::wait_read, 
+        [this, self](const asio::error_code& ec) {
+            if (!ec) {
                 struct iovec iov;
                 struct msghdr msg;
                 int rc;
@@ -167,7 +139,10 @@ void NetlinkCommunicator::epoll_loop() {
                     message_promise->set_value(received_message);
                     message_promise.reset();
                 }
+
+                // Continue receiving messages
+                start_receive();
             }
         }
-    }
+    );
 }
