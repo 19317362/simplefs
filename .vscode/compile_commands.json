@@ -1,6 +1,11 @@
 [
 {
   "directory": "/work/simplefs",
-  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-std=c++20", "-o", "build/.objs/fpa-simu/linux/x86_64/release/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-fPIC", "-O3", "-std=c++20", "-isystem", "/home/wps/.xmake/packages/y/yw_asio/20241019.110153/5a6637ef0c26413eaa72791c559584f1/include", "-isystem", "/home/wps/.xmake/packages/y/yw_osal/20241019.114100/d7335e23790a4b9c9dac65ac0655228a/include", "-isystem", "/home/wps/.xmake/packages/y/yw_log/20241019.110256/54a848ea4d924a9097b175dd14005aab/include", "-isystem", "/home/wps/.xmake/packages/a/asio/1.30.2/c1047cd667c14a44bea718715a77a7f5/include", "-DNDEBUG", "-o", "build/.objs/yw_fpa/linux/x86_64/release/src/yw_fpa.cpp.o", "src/yw_fpa.cpp"],
+  "file": "src/yw_fpa.cpp"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-std=c++20", "-isystem", "/home/wps/.xmake/packages/y/yw_asio/20241019.110153/5a6637ef0c26413eaa72791c559584f1/include", "-isystem", "/home/wps/.xmake/packages/y/yw_osal/20241019.114100/d7335e23790a4b9c9dac65ac0655228a/include", "-isystem", "/home/wps/.xmake/packages/y/yw_log/20241019.110256/54a848ea4d924a9097b175dd14005aab/include", "-isystem", "/home/wps/.xmake/packages/a/asio/1.30.2/c1047cd667c14a44bea718715a77a7f5/include", "-DNDEBUG", "-o", "build/.objs/fpa-simu/linux/x86_64/release/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
   "file": "src/fpa-simu.cpp"
 }]

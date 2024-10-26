@@ -2,15 +2,30 @@
 -- Kernel directory and current working directory
 -- local KDIR = "/usr/src/linux-headers-6.8.0-47-generic"
 -- local PWD = os.curdir()
-
+add_rules("mode.debug", "mode.release")
 -- 使用C++20
 set_languages("cxx20")
+
+-- 默认都使用动态库
+add_requireconfs("*", {configs = {shared = true, YW_PLAT_ID = get_config("YW_PLAT_ID")}})
+
+-- 依赖项目工程
+add_requires("yw_asio")
+
+    
+-- 共享库
+target("yw_fpa")
+    set_kind("shared")
+    add_files("src/yw_fpa.cpp")
+    add_packages("yw_asio")
+
 -- src 目录下的 fpa-simu.c 生成 fpa-simu 可执行程序, 模拟 fpa,开发时使用
 target("fpa-simu")
     set_kind("binary")
+    add_packages("yw_asio")
+    add_deps("yw_fpa")
     add_files("src/fpa-simu.cpp")
     
-
 -- Define the target for the kernel module
 -- target("simplefs")
 --     add_rules("platform.linux.driver")
