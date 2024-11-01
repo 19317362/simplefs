@@ -16,8 +16,8 @@ add_requireconfs("*", {configs = {shared = true, YW_PLAT_ID = get_config("YW_PLA
 
 -- 依赖项目工程
 add_requires("asio")
+add_requires("linux-headers", {configs = {driver_modules = false}})
 
-    
 -- 共享库
 target("yw_fpa")
     set_kind("shared")
@@ -30,7 +30,15 @@ target("fpa-simu")
     add_packages("asio")
     add_deps("yw_fpa")
     add_files("src/fpa-simu.cpp")
-    
+
+target("test-asio")
+    set_kind("binary")
+    add_packages("asio")
+    add_deps("yw_fpa")
+    add_defines("__STDC_LIMIT_MACROS", "__STDC_CONSTANT_MACROS")
+    add_packages("linux-headers")
+    add_files("test-asio/*.cpp")  
+
 -- Define the target for the kernel module
 -- target("simplefs")
 --     add_rules("platform.linux.driver")
