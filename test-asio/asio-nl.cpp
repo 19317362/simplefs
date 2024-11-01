@@ -9,6 +9,15 @@
 #include <netlink/msg.h>
 
 #define NETLINK_USER 31 
+#define MAX_PAYLOAD 1024
+struct test_context
+{
+    int v_nl_socket;
+    int v_tty_fd;
+    int v_epoll_fd;
+
+};
+static test_context g_test_context;
 
 int create_netlink_socket() {
     struct sockaddr_nl local;
@@ -31,32 +40,6 @@ int create_netlink_socket() {
 
     return sock;
 }
-
-void async_read_netlink(asio::io_context& io_context, 
-    asio::posix::stream_descriptor& stream,
-    std::shared_ptr<std::vector<char>> buffer
-    )
-{
-    std::cout << "async_read_netlink ... " << std::endl;
-    stream.async_wait(asio::posix::stream_descriptor::wait_read,
-        [buffer, &stream, &io_context](const std::error_code& ec)
-        {
-            if (!ec)
-            {
-                std::cout << "Read Arrived " << std::endl;
-                async_read_netlink(io_context, stream, buffer);
-            }
-            else if (ec == asio::error::operation_aborted)
-            {
-                std::cerr << "Error: Operation aborted" << std::endl;
-            }
-            else
-            {
-                std::cerr << "Error: " << ec.message() << std::endl;
-            }
-        });
-}
-
 void ReadMsg(int sock) {
     struct sockaddr_nl nladdr;
     struct msghdr msg;
@@ -77,17 +60,136 @@ void ReadMsg(int sock) {
     if (ret < 0) {
         perror("recvmsg");
     } else {
-        std::cout << "Received message: " << buffer << std::endl;
+        std::cout << "Received message: " << ret << std::endl;
     }
 }
+
+// send message to netlink socket
+void send_netlink_message(int sock_fd, const char* message, size_t message_len) {
+    struct iovec iov;
+    struct msghdr msg;
+    int rc;
+
+    struct nlmsghdr* nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+    if (!nlh) {
+        throw std::runtime_error("malloc failed");
+    }
+
+    memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
+    nlh->nlmsg_len = NLMSG_SPACE(message_len);
+    nlh->nlmsg_pid = getpid();
+    nlh->nlmsg_flags = 0;
+
+    memcpy(NLMSG_DATA(nlh), message, message_len);
+
+    iov.iov_base = (void *)nlh;
+    iov.iov_len = nlh->nlmsg_len;
+    memset(&msg, 0, sizeof(msg));
+
+    struct sockaddr_nl dest_addr;
+    memset(&dest_addr, 0, sizeof(dest_addr));
+    dest_addr.nl_family = AF_NETLINK;
+    dest_addr.nl_pid = 0; /* For Linux Kernel */
+    dest_addr.nl_groups = 0; /* unicast */
+
+    msg.msg_name = (void *)&dest_addr;
+    msg.msg_namelen = sizeof(dest_addr);
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    rc = sendmsg(sock_fd, &msg, 0);
+    if (rc < 0) {
+        free(nlh);
+        throw std::runtime_error("sendmsg failed: " + std::string(strerror(errno)));
+    }
+    free(nlh);
+
+}
+
+void async_read_netlink(asio::io_context& io_context, 
+    asio::posix::stream_descriptor& stream,
+    std::shared_ptr<std::vector<char>> buffer
+    )
+{
+    //std::cout << "async_read_netlink ... " << std::endl;
+    stream.async_wait(asio::posix::stream_descriptor::wait_read,
+        [buffer, &stream, &io_context](const std::error_code& ec)
+        {
+            if (!ec)
+            {
+                std::cout << "Read Arrived " << std::endl;
+                //使用 epoll_wait 处理读事件
+                struct epoll_event events[10];
+                int nfds = 0;
+                do
+                {
+                    nfds = epoll_wait(g_test_context.v_epoll_fd , events, 10, 0);
+                    if (nfds == -1) {
+                        if (errno == EINTR) {
+                            continue;        
+                        }
+                        else{
+                            std::cerr << "epoll_wait failed: " << strerror(errno) << std::endl;
+                            break;
+                        }
+                    }
+                    else{
+                        for (int n = 0; n < nfds; ++n) {
+                            if (events[n].data.fd == g_test_context.v_nl_socket) {
+                                ReadMsg(g_test_context.v_nl_socket);
+                            }
+                            else if (events[n].data.fd == g_test_context.v_tty_fd) {
+                                char buffer[4096];
+                                int ret = read(g_test_context.v_tty_fd, buffer, sizeof(buffer));
+                                if (ret < 0) {
+                                    perror("read");
+                                } else {
+                                    std::cout << "Received message: " << ret << std::endl;
+                                }
+                            }
+                            else
+                            {
+                                std::cerr << "Unknown fd: " << events[n].data.fd << std::endl;
+                            }
+                            
+                        }                
+
+                    }
+                } while (nfds>0);
+                
+
+
+
+                async_read_netlink(io_context, stream, buffer);
+            }
+            else if (ec == asio::error::operation_aborted)
+            {
+                std::cerr << "Error: Operation aborted" << std::endl;
+            }
+            else
+            {
+                std::cerr << "Error: " << ec.message() << std::endl;
+            }
+        });
+}
+
+
+#define TIME_INTERVAL 1
 void TimerHandler(asio::steady_timer& timer, int sock) {
-    ReadMsg(sock);
-    timer.expires_after(asio::chrono::seconds(10));
+    //ReadMsg(sock);
+    std::cout << "TimerHandler ... " << std::endl;
+    char buf[32];
+    static int NB = 0;
+    auto len = sprintf(buf, "No. %d", NB++);
+    send_netlink_message(sock, buf, len);
+    /*
+    timer.expires_after(asio::chrono::seconds(TIME_INTERVAL));
     timer.async_wait([&](const asio::error_code& ec) {
         if (!ec) {
             TimerHandler(timer, sock);
         }
     });
+    */
 }
 
 void handle_ep_read(const asio::error_code& ec, std::size_t bytes_transferred) {
@@ -104,20 +206,67 @@ int main() {
         if (sock < 0) {
             return 1;
         }
+        printf("sock = %d\n", sock);
+        g_test_context.v_nl_socket = sock;
+        // Open the /dev/tnt0 device
+        int tnt_fd = open("/dev/tnt0", O_RDONLY | O_NONBLOCK);
+        if (tnt_fd == -1) {
+            perror("open");
+            return 1;
+        }
+        g_test_context.v_tty_fd = tnt_fd;
+        // Create epoll instance
+        int epoll_fd = epoll_create1(0);
+        if (epoll_fd == -1) {
+            perror("epoll_create1");
+            close(tnt_fd);
+            return 1;
+        }
+        g_test_context.v_epoll_fd = epoll_fd;
+
+        // Add /dev/tnt0 file descriptor to epoll
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = tnt_fd;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tnt_fd, &ev) == -1) {
+            perror("epoll_ctl");
+            close(tnt_fd);
+            close(epoll_fd);
+            return 1;
+        }
+        // add sock to epoll
+        ev.events = EPOLLIN;
+        ev.data.fd = sock;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock, &ev) == -1) {
+            perror("epoll_ctl");
+            close(tnt_fd);
+            close(epoll_fd);
+            return 1;
+        }
+
 
         asio::io_context io;
-        auto buffer = std::make_shared<std::vector<char>>(1024);
-        asio::posix::stream_descriptor stream(io, sock);
-        async_read_netlink(io, stream, buffer);
+        asio::posix::stream_descriptor ep_stream(io, epoll_fd);
 
-        asio::steady_timer timer(io, asio::chrono::seconds(10));
+        // Example buffer to read into
+        std::vector<char> buffer(1024);
+
+        // Start async wait on epoll
+        async_read_netlink(io, ep_stream, std::make_shared<std::vector<char>>(buffer));
+        
+        asio::steady_timer timer(io, asio::chrono::seconds(TIME_INTERVAL));
         timer.async_wait([&](const asio::error_code& ec) {
             if (!ec) {
                 TimerHandler(timer, sock);
             }
-        });
+        });        
 
+        // Run the io_context to process the asynchronous operations
         io.run();
+
+        // Close the file descriptors
+        close(tnt_fd);
+        close(sock);
     } catch (const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
     }
