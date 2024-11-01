@@ -106,7 +106,7 @@ void send_netlink_message(int sock_fd, const char* message, size_t message_len) 
 
 }
 
-void async_read_netlink(asio::io_context& io_context, 
+void async_read_epoll(asio::io_context& io_context, 
     asio::posix::stream_descriptor& stream,
     std::shared_ptr<std::vector<char>> buffer
     )
@@ -160,6 +160,33 @@ void async_read_netlink(asio::io_context& io_context,
 
 
 
+                async_read_epoll(io_context, stream, buffer);
+            }
+            else if (ec == asio::error::operation_aborted)
+            {
+                std::cerr << "Error: Operation aborted" << std::endl;
+            }
+            else
+            {
+                std::cerr << "Error: " << ec.message() << std::endl;
+            }
+        });
+}
+void async_read_netlink(asio::io_context& io_context, 
+    asio::posix::stream_descriptor& stream,
+    std::shared_ptr<std::vector<char>> buffer
+    )
+{
+    //std::cout << "async_read_netlink ... " << std::endl;
+    stream.async_wait(asio::posix::stream_descriptor::wait_read,
+        [buffer, &stream, &io_context](const std::error_code& ec)
+        {
+            if (!ec)
+            {
+                std::cout << "Read Arrived " << std::endl;
+                ReadMsg(g_test_context.v_nl_socket);
+
+
                 async_read_netlink(io_context, stream, buffer);
             }
             else if (ec == asio::error::operation_aborted)
@@ -173,6 +200,67 @@ void async_read_netlink(asio::io_context& io_context,
         });
 }
 
+void async_wait_tnt(asio::io_context& io_context, 
+    asio::posix::stream_descriptor& stream,
+    std::shared_ptr<std::vector<char>> buffer
+    )
+{
+    //std::cout << "async_read_netlink ... " << std::endl;
+    stream.async_wait(asio::posix::stream_descriptor::wait_read,
+        [buffer, &stream, &io_context](const std::error_code& ec)
+        {
+            if (!ec)
+            {
+                std::cout << "TNT Arrived " << std::endl;
+                
+                int ret = read(g_test_context.v_tty_fd, buffer->data(), buffer->size());
+                if (ret < 0) {
+                    perror("read");
+                } else {
+                    std::cout << "Received message: " << ret << std::endl;
+                }
+
+
+                async_wait_tnt(io_context, stream, buffer);
+            }
+            else if (ec == asio::error::operation_aborted)
+            {
+                std::cerr << "Error: Operation aborted" << std::endl;
+            }
+            else
+            {
+                std::cerr << "Error: " << ec.message() << std::endl;
+            }
+        });
+}
+static std::array<char, 1024> tnt_buffer_;
+void async_read_tnt(asio::io_context& io_context, 
+    asio::posix::stream_descriptor& stream
+    
+    )
+{
+    //调用 async_read 
+    stream.async_read_some(
+        asio::buffer(tnt_buffer_), // Correctly dereference the buffer
+        [&](const asio::error_code& ec, std::size_t bytes_transferred)
+        {
+            if (!ec)
+            {
+                std::cout << "TNT RX " << bytes_transferred << std::endl;
+                
+                async_read_tnt(io_context, stream);
+            }
+            else if (ec == asio::error::operation_aborted)
+            {
+                std::cerr << "TNT Error: Operation aborted" << std::endl;
+            }
+            else
+            {
+                std::cerr << "TNT Error: " << ec.message() << std::endl;
+            }
+        });
+
+}
 
 #define TIME_INTERVAL 1
 void TimerHandler(asio::steady_timer& timer, int sock) {
@@ -192,13 +280,7 @@ void TimerHandler(asio::steady_timer& timer, int sock) {
     */
 }
 
-void handle_ep_read(const asio::error_code& ec, std::size_t bytes_transferred) {
-    if (!ec) {
-        std::cout << "Read " << bytes_transferred << " bytes" << std::endl;
-    } else {
-        std::cerr << "Error on read: " << ec.message() << std::endl;
-    }
-}
+
 
 int main() {
     try {
@@ -215,45 +297,25 @@ int main() {
             return 1;
         }
         g_test_context.v_tty_fd = tnt_fd;
-        // Create epoll instance
-        int epoll_fd = epoll_create1(0);
-        if (epoll_fd == -1) {
-            perror("epoll_create1");
-            close(tnt_fd);
-            return 1;
-        }
-        g_test_context.v_epoll_fd = epoll_fd;
 
-        // Add /dev/tnt0 file descriptor to epoll
-        struct epoll_event ev;
-        ev.events = EPOLLIN;
-        ev.data.fd = tnt_fd;
-        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tnt_fd, &ev) == -1) {
-            perror("epoll_ctl");
-            close(tnt_fd);
-            close(epoll_fd);
-            return 1;
-        }
-        // add sock to epoll
-        ev.events = EPOLLIN;
-        ev.data.fd = sock;
-        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock, &ev) == -1) {
-            perror("epoll_ctl");
-            close(tnt_fd);
-            close(epoll_fd);
-            return 1;
-        }
+        g_test_context.v_epoll_fd = 0;
+
+
 
 
         asio::io_context io;
-        asio::posix::stream_descriptor ep_stream(io, epoll_fd);
+        asio::posix::stream_descriptor ep_stream(io, sock);
 
         // Example buffer to read into
         std::vector<char> buffer(1024);
 
+        asio::posix::stream_descriptor tnt_stream(io, tnt_fd);
         // Start async wait on epoll
         async_read_netlink(io, ep_stream, std::make_shared<std::vector<char>>(buffer));
-        
+
+        std::vector<char> bufferTnt(1024);
+        async_read_tnt(io, tnt_stream);
+        //async_wait_tnt(io, tnt_stream, std::make_shared<std::vector<char>>(buffer));
         asio::steady_timer timer(io, asio::chrono::seconds(TIME_INTERVAL));
         timer.async_wait([&](const asio::error_code& ec) {
             if (!ec) {
