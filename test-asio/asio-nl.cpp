@@ -1,19 +1,12 @@
+#include <iostream>
+#include <memory>
+#include <functional>
 #include <asio.hpp>
 #include <linux/netlink.h>
 #include <netlink/socket.h>
 #include <netlink/msg.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <iostream>
-#include <memory>
-#include <functional>
-#include <climits>
-
-
-
-
-#define NETLINK_USER 31
+#define NETLINK_USER 31 
 // 创建一个Netlink套接字
 int create_netlink_socket() {
     struct sockaddr_nl local;
@@ -51,15 +44,15 @@ void async_read_netlink(asio::io_context& io, int sock) {
 
                 // 处理接收到的数据
                 struct nlmsghdr *nlh = nullptr;
-                char *data = asio::buffer_cast<char*>(buffer.data());
-                for (char *ptr = data; ptr < data + bytes_transferred; ) {
+                auto data = asio::buffer_cast<const char*>(buffer.data());
+                for (auto ptr = data; ptr < data + bytes_transferred; ) {
                     nlh = (struct nlmsghdr *)ptr;
                     if (nlh->nlmsg_type == NLMSG_DONE) {
                         break;
                     }
                     std::cout << "Received message: type=" << nlh->nlmsg_type
                               << ", len=" << nlh->nlmsg_len
-                              << ", pid=" << nlh->nl_pid << std::endl;
+                              << ", pid=" << nlh->nlmsg_pid << std::endl;
 
                     ptr += NLMSG_ALIGN(nlh->nlmsg_len);
                 }

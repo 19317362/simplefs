@@ -1,11 +1,16 @@
 [
 {
   "directory": "/work/simplefs",
-  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-isystem", "/home/wps/.xmake/packages/y/yw_asio/20241019.110153/5a6637ef0c26413eaa72791c559584f1/include", "-isystem", "/home/wps/.xmake/packages/y/yw_osal/20241019.114100/d7335e23790a4b9c9dac65ac0655228a/include", "-isystem", "/home/wps/.xmake/packages/y/yw_log/20241019.110256/54a848ea4d924a9097b175dd14005aab/include", "-isystem", "/home/wps/.xmake/packages/a/asio/1.30.2/c1047cd667c14a44bea718715a77a7f5/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
   "file": "src/fpa-simu.cpp"
 },
 {
   "directory": "/work/simplefs",
-  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-fPIC", "-g", "-O0", "-std=c++20", "-isystem", "/home/wps/.xmake/packages/y/yw_asio/20241019.110153/5a6637ef0c26413eaa72791c559584f1/include", "-isystem", "/home/wps/.xmake/packages/y/yw_osal/20241019.114100/d7335e23790a4b9c9dac65ac0655228a/include", "-isystem", "/home/wps/.xmake/packages/y/yw_log/20241019.110256/54a848ea4d924a9097b175dd14005aab/include", "-isystem", "/home/wps/.xmake/packages/a/asio/1.30.2/c1047cd667c14a44bea718715a77a7f5/include", "-o", "build/.objs/yw_fpa/linux/x86_64/debug/src/yw_fpa.cpp.o", "src/yw_fpa.cpp"],
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-fPIC", "-g", "-O0", "-std=c++20", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/yw_fpa/linux/x86_64/debug/src/yw_fpa.cpp.o", "src/yw_fpa.cpp"],
   "file": "src/yw_fpa.cpp"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-I/usr/include/libnl3", "-D__STDC_LIMIT_MACROS", "-D__STDC_CONSTANT_MACROS", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-isystem", "/home/wps/.xmake/packages/g/gtest/v1.15.2/5772c51d84014853a0b923be54903de1/include", "-o", "build/.objs/test-asio/linux/x86_64/debug/test-asio/asio-nl.cpp.o", "test-asio/asio-nl.cpp"],
+  "file": "test-asio/asio-nl.cpp"
 }]
