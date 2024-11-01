@@ -8,7 +8,7 @@ MKFS = mkfs.dxrfs
 
 # https://stackoverflow.com/questions/12244979/build-kernel-module-into-a-specific-directory
 # change .o .mod.c .mod.o .ko .mod ... files to ./build directory
-BUILD_DIR := $(PWD)/build
+BUILD_DIR := $(PWD)/ko
 BUILD_DIR_MAKEFILE := $(BUILD_DIR)/Makefile
 
 
