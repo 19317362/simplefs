@@ -1,3 +1,5 @@
+// FILE: asio-nl.cpp
+
 #include <iostream>
 #include <memory>
 #include <functional>
@@ -7,10 +9,9 @@
 #include <netlink/msg.h>
 
 #define NETLINK_USER 31 
-// 创建一个Netlink套接字
+
 int create_netlink_socket() {
     struct sockaddr_nl local;
-    //int sock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     int sock = socket(PF_NETLINK, SOCK_RAW | SOCK_NONBLOCK, NETLINK_USER);
 
     if (sock < 0) {
@@ -21,7 +22,6 @@ int create_netlink_socket() {
     memset(&local, 0, sizeof(local));
     local.nl_family = AF_NETLINK;
     local.nl_pid = getpid();
-    //local.nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR;
 
     if (bind(sock, (struct sockaddr*)&local, sizeof(local)) < 0) {
         perror("bind");
@@ -32,69 +32,72 @@ int create_netlink_socket() {
     return sock;
 }
 
-// 异步读取Netlink消息
-/*
-void async_read_netlink_error(asio::io_context& io, int sock) {
-    asio::posix::stream_descriptor descriptor(io, sock);
-    asio::streambuf buffer;
-
-    descriptor.async_read_some(asio::buffer(buffer.prepare(1024)),
-        [&](const asio::error_code& error, std::size_t bytes_transferred) {
-            if (!error) {
-                buffer.commit(bytes_transferred);
-
-                // 处理接收到的数据
-                struct nlmsghdr *nlh = nullptr;
-                auto data = asio::buffer_cast<const char*>(buffer.data());
-                for (auto ptr = data; ptr < data + bytes_transferred; ) {
-                    nlh = (struct nlmsghdr *)ptr;
-                    if (nlh->nlmsg_type == NLMSG_DONE) {
-                        break;
-                    }
-                    std::cout << "Received message: type=" << nlh->nlmsg_type
-                              << ", len=" << nlh->nlmsg_len
-                              << ", pid=" << nlh->nlmsg_pid << std::endl;
-
-                    ptr += NLMSG_ALIGN(nlh->nlmsg_len);
-                }
-
-                // 继续异步读取
-                async_read_netlink(io, sock);
-            } else {
-                std::cerr << "Error: " << error.message() << std::endl;
-            }
-        });
-}
-*/
 void async_read_netlink(asio::io_context& io_context, 
     asio::posix::stream_descriptor& stream,
     std::shared_ptr<std::vector<char>> buffer
     )
 {
-    
-
-    stream.async_read_some(asio::buffer(*buffer),
-        [buffer, &stream,&io_context ](const std::error_code& ec, std::size_t bytes_transferred)
+    std::cout << "async_read_netlink ... " << std::endl;
+    stream.async_wait(asio::posix::stream_descriptor::wait_read,
+        [buffer, &stream, &io_context](const std::error_code& ec)
         {
             if (!ec)
             {
-                // Process the data read from the netlink socket
-                std::cout << "Read " << bytes_transferred << " bytes" << std::endl;
-                // Continue reading
-                async_read_netlink(io_context, stream, buffer );
+                std::cout << "Read Arrived " << std::endl;
+                async_read_netlink(io_context, stream, buffer);
             }
             else if (ec == asio::error::operation_aborted)
             {
-                // Handle the operation aborted error
                 std::cerr << "Error: Operation aborted" << std::endl;
             }
             else
             {
-                // Handle other errors
                 std::cerr << "Error: " << ec.message() << std::endl;
             }
         });
 }
+
+void ReadMsg(int sock) {
+    struct sockaddr_nl nladdr;
+    struct msghdr msg;
+    struct iovec iov;
+    char buffer[4096];
+
+    memset(&nladdr, 0, sizeof(nladdr));
+    nladdr.nl_family = AF_NETLINK;
+
+    iov.iov_base = buffer;
+    iov.iov_len = sizeof(buffer);
+    msg.msg_name = &nladdr;
+    msg.msg_namelen = sizeof(nladdr);
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    int ret = recvmsg(sock, &msg, 0);
+    if (ret < 0) {
+        perror("recvmsg");
+    } else {
+        std::cout << "Received message: " << buffer << std::endl;
+    }
+}
+void TimerHandler(asio::steady_timer& timer, int sock) {
+    ReadMsg(sock);
+    timer.expires_after(asio::chrono::seconds(10));
+    timer.async_wait([&](const asio::error_code& ec) {
+        if (!ec) {
+            TimerHandler(timer, sock);
+        }
+    });
+}
+
+void handle_ep_read(const asio::error_code& ec, std::size_t bytes_transferred) {
+    if (!ec) {
+        std::cout << "Read " << bytes_transferred << " bytes" << std::endl;
+    } else {
+        std::cerr << "Error on read: " << ec.message() << std::endl;
+    }
+}
+
 int main() {
     try {
         int sock = create_netlink_socket();
@@ -106,6 +109,13 @@ int main() {
         auto buffer = std::make_shared<std::vector<char>>(1024);
         asio::posix::stream_descriptor stream(io, sock);
         async_read_netlink(io, stream, buffer);
+
+        asio::steady_timer timer(io, asio::chrono::seconds(10));
+        timer.async_wait([&](const asio::error_code& ec) {
+            if (!ec) {
+                TimerHandler(timer, sock);
+            }
+        });
 
         io.run();
     } catch (const std::exception& e) {
