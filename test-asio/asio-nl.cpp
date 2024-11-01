@@ -21,7 +21,7 @@ int create_netlink_socket() {
     memset(&local, 0, sizeof(local));
     local.nl_family = AF_NETLINK;
     local.nl_pid = getpid();
-    local.nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR;
+    //local.nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR;
 
     if (bind(sock, (struct sockaddr*)&local, sizeof(local)) < 0) {
         perror("bind");
@@ -33,7 +33,8 @@ int create_netlink_socket() {
 }
 
 // 异步读取Netlink消息
-void async_read_netlink(asio::io_context& io, int sock) {
+/*
+void async_read_netlink_error(asio::io_context& io, int sock) {
     asio::posix::stream_descriptor descriptor(io, sock);
     asio::streambuf buffer;
 
@@ -64,7 +65,36 @@ void async_read_netlink(asio::io_context& io, int sock) {
             }
         });
 }
+*/
+void async_read_netlink(asio::io_context& io_context, 
+    asio::posix::stream_descriptor& stream,
+    std::shared_ptr<std::vector<char>> buffer
+    )
+{
+    
 
+    stream.async_read_some(asio::buffer(*buffer),
+        [buffer, &stream,&io_context ](const std::error_code& ec, std::size_t bytes_transferred)
+        {
+            if (!ec)
+            {
+                // Process the data read from the netlink socket
+                std::cout << "Read " << bytes_transferred << " bytes" << std::endl;
+                // Continue reading
+                async_read_netlink(io_context, stream, buffer );
+            }
+            else if (ec == asio::error::operation_aborted)
+            {
+                // Handle the operation aborted error
+                std::cerr << "Error: Operation aborted" << std::endl;
+            }
+            else
+            {
+                // Handle other errors
+                std::cerr << "Error: " << ec.message() << std::endl;
+            }
+        });
+}
 int main() {
     try {
         int sock = create_netlink_socket();
@@ -73,7 +103,9 @@ int main() {
         }
 
         asio::io_context io;
-        async_read_netlink(io, sock);
+        auto buffer = std::make_shared<std::vector<char>>(1024);
+        asio::posix::stream_descriptor stream(io, sock);
+        async_read_netlink(io, stream, buffer);
 
         io.run();
     } catch (const std::exception& e) {
