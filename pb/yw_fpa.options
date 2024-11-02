@@ -2,5 +2,3 @@
 
 * max_size:32;
 testpb.User.email max_size:64;
-
-

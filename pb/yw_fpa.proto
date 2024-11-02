@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package ywfpa;
+//./generator/nanopb_generator -v -I ./pb -D ./pb ./pb/ywfpa.proto
+//FPA => KO
+// 包头 -- 固定长度
+message PkgHeader {
+  fixed32 magic = 1;   // 魔数 0xFEADBEEF
+  fixed32 cmd = 2;     // 命令号 -- 用于区分不同的消息
+  fixed32 length = 3;  // 数据长度 -- 序列化后的长度
+  fixed32 length_org = 4;     // 序列化前的长度
+}
+
+// 命令号 -- 用于区分不同的消息
+enum CmdId {
+  //-- 系统组 和TF卡无关命令
+  CmdNA = 0;     // 无效命令
+  CmdAlive = 1;  // 心跳
+  CmdStart = 2;  // 开始
+  CmdExit = 3;   // 退出
+  //-- 媒体组 和TF卡有关命令
+  CmdDevAdded = 4; // 设备初始化
+  CmdDevRemoved = 5;  // 设备移除
+  CmdSegmentUpdated = 6;  // 媒体段信息 -- 更新
+}
+
+// 命令头 -- 请求 和应答 共用
+message CmdHeader {
+  PkgHeader pkg_header = 1;  // 包含 PkgHeader 消息
+  uint32 seq = 2;    // 发起方的 序列号 --- 非0
+  uint32 seq_org = 3;    // 应答时，对应应答的 原 序列号 --- 非0 是原请求的 seq. 0 表示不是应答，是请求
+  int32 rc = 4;     // 返回码 0:成功，<0:失败, >0: 表示数量
+}
+
+// 设备消息 -- 设备初始化
+message DevAdded {
+  CmdHeader cmd_header = 1;  // 包含 Header 消息
+  uint32 dev_id = 2;  // 设备 ID, 不管是 TF 还  SSD， 统一排序
+}
+
+// 设备消息 -- 设备移除
+message DevRemoved {
+  CmdHeader cmd_header = 1;  // 包含 Header 消息
+  uint32 dev_id = 2;  // 设备 ID, 不管是 TF 还  SSD， 统一排序
+}
+// 媒体段 -- 数据
+message SegmentInfo {
+  uint32 dev_id = 1;  // 设备 ID, 不管是 TF 还  SSD， 统一排序
+  uint32 seg_id = 2;  // 媒体段 ID， 与VA中的 Segment ID 一致
+  uint32 begin_time = 3;  // 媒体开始时间 2000-01-01 00:00:00开始的UTC时间秒数 --0 表示本段被删除/覆盖
+  uint32 end_time = 4;  // 结束时间,2000-01-01 00:00:00开始的UTC时间秒数 -- 0 表示未结束, 仍在录制
+  uint32 media_type_mask = 5;  // 媒体类型掩码 见DXR_MDMASK_ALL
+  uint32 ch_mask = 6;  // 通道掩码 -- 同VA中的通道掩码
+  //#define DXR_MDMASK_VIDEO			0x00000001		// 视频类型数据
+  //#define DXR_MDMASK_AUDIO			0x00000002		// 音频类型数据
+  //#define DXR_MDMASK_INFO				0x00000004		// 附加信息
+  //#define DXR_MDMASK_PICTURE			0x00000008		// 图片信息  
+}
+// 媒体段 -- 一段媒体
+message SegmentUpdated {
+  CmdHeader cmd_header = 1;  // 包含 Header 消息
+  SegmentInfo seg_info = 2;  // 媒体段信息
+}
+
+

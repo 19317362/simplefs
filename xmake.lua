@@ -19,7 +19,7 @@ add_requireconfs("*", {configs = {shared = true, YW_PLAT_ID = get_config("YW_PLA
 
 -- 依赖项目工程
 add_requires("asio")
---add_requires("gtest")
+add_requires("gtest")
 -- add_requires("linux-headers", {configs = {driver_modules = false}})
 
 -- 共享库
@@ -27,6 +27,8 @@ target("yw_fpa")
     set_kind("shared")
     add_files("src/yw_fpa.cpp")
     add_packages("asio")
+    add_includedirs("./pb")
+    add_files("./pb/*.c")    
 
 -- src 目录下的 fpa-simu.c 生成 fpa-simu 可执行程序, 模拟 fpa,开发时使用
 target("fpa-simu")
@@ -35,16 +37,26 @@ target("fpa-simu")
     add_deps("yw_fpa")
     add_files("src/fpa-simu.cpp")
     add_includedirs("./pb")
-    add_files("./pb/*.c")
+
+-- 使用gtest测试用例
+target("test-fpa")
+    set_kind("binary")
+    add_packages("asio")
+    add_packages("gtest", "gtest_main")
+    add_deps("yw_fpa")
+    --add_defines("__STDC_LIMIT_MACROS", "__STDC_CONSTANT_MACROS")
+    --add_includedirs("/usr/include/libnl3")
+    add_files("test-fpa/*.cpp")  
+    add_includedirs("./pb")
 
 target("test-asio")
     set_kind("binary")
     add_packages("asio")
-    --add_packages("gtest", "gtest_main")
     add_deps("yw_fpa")
     --add_defines("__STDC_LIMIT_MACROS", "__STDC_CONSTANT_MACROS")
     --add_includedirs("/usr/include/libnl3")
     add_files("test-asio/*.cpp")  
+
 
 -- Define the target for the kernel module
 -- target("simplefs")

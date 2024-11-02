@@ -1,5 +1,5 @@
 obj-m += dxrfs.o
-dxrfs-objs := fs.o super.o inode.o file.o dir.o extent.o pb/pb_common.o pb/pb_encode.o pb/pb_decode.o pb/user.pb.o
+dxrfs-objs := fs.o super.o inode.o file.o dir.o extent.o pb/pb_common.o pb/pb_encode.o pb/pb_decode.o pb/yw_fpa.pb.o
 #KVER = '6.8.0-47-generic'
 KVER = $(shell uname -r)
 KDIR ?= /lib/modules/${KVER}/build
