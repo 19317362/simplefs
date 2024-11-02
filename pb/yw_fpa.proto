@@ -9,6 +9,9 @@ message PkgHeader {
   fixed32 cmd = 2;     // 命令号 -- 用于区分不同的消息
   fixed32 length = 3;  // 数据长度 -- 序列化后的长度
   fixed32 length_org = 4;     // 序列化前的长度
+  uint32 seq = 5;    // 发起方的 序列号 --- 非0
+  uint32 seq_org = 6;    // 应答时，对应应答的 原 序列号 --- 非0 是原请求的 seq. 0 表示不是应答，是请求
+  int32 rc = 7;     // 返回码 0:成功，<0:失败, >0: 表示数量  
 }
 
 // 命令号 -- 用于区分不同的消息
@@ -24,23 +27,15 @@ enum CmdId {
   CmdSegmentUpdated = 6;  // 媒体段信息 -- 更新
 }
 
-// 命令头 -- 请求 和应答 共用
-message CmdHeader {
-  PkgHeader pkg_header = 1;  // 包含 PkgHeader 消息
-  uint32 seq = 2;    // 发起方的 序列号 --- 非0
-  uint32 seq_org = 3;    // 应答时，对应应答的 原 序列号 --- 非0 是原请求的 seq. 0 表示不是应答，是请求
-  int32 rc = 4;     // 返回码 0:成功，<0:失败, >0: 表示数量
-}
-
 // 设备消息 -- 设备初始化
 message DevAdded {
-  CmdHeader cmd_header = 1;  // 包含 Header 消息
+  PkgHeader cmd_header = 1;  // 包含 Header 消息
   uint32 dev_id = 2;  // 设备 ID, 不管是 TF 还  SSD， 统一排序
 }
 
 // 设备消息 -- 设备移除
 message DevRemoved {
-  CmdHeader cmd_header = 1;  // 包含 Header 消息
+  PkgHeader cmd_header = 1;  // 包含 Header 消息
   uint32 dev_id = 2;  // 设备 ID, 不管是 TF 还  SSD， 统一排序
 }
 // 媒体段 -- 数据
@@ -58,7 +53,7 @@ message SegmentInfo {
 }
 // 媒体段 -- 一段媒体
 message SegmentUpdated {
-  CmdHeader cmd_header = 1;  // 包含 Header 消息
+  PkgHeader cmd_header = 1;  // 包含 Header 消息
   SegmentInfo seg_info = 2;  // 媒体段信息
 }
 

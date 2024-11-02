@@ -9,9 +9,6 @@
 PB_BIND(ywfpa_PkgHeader, ywfpa_PkgHeader, AUTO)
 
 
-PB_BIND(ywfpa_CmdHeader, ywfpa_CmdHeader, AUTO)
-
-
 PB_BIND(ywfpa_DevAdded, ywfpa_DevAdded, AUTO)
 
 
