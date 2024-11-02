@@ -19,7 +19,7 @@ add_requireconfs("*", {configs = {shared = true, YW_PLAT_ID = get_config("YW_PLA
 
 -- 依赖项目工程
 add_requires("asio")
-add_requires("gtest")
+--add_requires("gtest")
 -- add_requires("linux-headers", {configs = {driver_modules = false}})
 
 -- 共享库
@@ -34,14 +34,16 @@ target("fpa-simu")
     add_packages("asio")
     add_deps("yw_fpa")
     add_files("src/fpa-simu.cpp")
+    add_includedirs("./pb")
+    add_files("./pb/*.c")
 
 target("test-asio")
     set_kind("binary")
     add_packages("asio")
-    add_packages("gtest", "gtest_main")
+    --add_packages("gtest", "gtest_main")
     add_deps("yw_fpa")
-    add_defines("__STDC_LIMIT_MACROS", "__STDC_CONSTANT_MACROS")
-    add_includedirs("/usr/include/libnl3")
+    --add_defines("__STDC_LIMIT_MACROS", "__STDC_CONSTANT_MACROS")
+    --add_includedirs("/usr/include/libnl3")
     add_files("test-asio/*.cpp")  
 
 -- Define the target for the kernel module

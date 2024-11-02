@@ -1,16 +1,36 @@
 [
 {
   "directory": "/work/simplefs",
-  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
-  "file": "src/fpa-simu.cpp"
-},
-{
-  "directory": "/work/simplefs",
   "arguments": ["/usr/bin/gcc", "-c", "-m64", "-fPIC", "-g", "-O0", "-std=c++20", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/yw_fpa/linux/x86_64/debug/src/yw_fpa.cpp.o", "src/yw_fpa.cpp"],
   "file": "src/yw_fpa.cpp"
 },
 {
   "directory": "/work/simplefs",
-  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-I/usr/include/libnl3", "-D__STDC_LIMIT_MACROS", "-D__STDC_CONSTANT_MACROS", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-isystem", "/home/wps/.xmake/packages/g/gtest/v1.15.2/5772c51d84014853a0b923be54903de1/include", "-o", "build/.objs/test-asio/linux/x86_64/debug/test-asio/asio-nl.cpp.o", "test-asio/asio-nl.cpp"],
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-Ipb", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/pb/pb_common.c.o", "pb/pb_common.c"],
+  "file": "pb/pb_common.c"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-Ipb", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/pb/user.pb.c.o", "pb/user.pb.c"],
+  "file": "pb/user.pb.c"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-Ipb", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/pb/pb_encode.c.o", "pb/pb_encode.c"],
+  "file": "pb/pb_encode.c"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-Ipb", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/pb/pb_decode.c.o", "pb/pb_decode.c"],
+  "file": "pb/pb_decode.c"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-Ipb", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/fpa-simu/linux/x86_64/debug/src/fpa-simu.cpp.o", "src/fpa-simu.cpp"],
+  "file": "src/fpa-simu.cpp"
+},
+{
+  "directory": "/work/simplefs",
+  "arguments": ["/usr/bin/gcc", "-c", "-m64", "-g", "-O0", "-std=c++20", "-fexceptions", "-isystem", "/home/wps/.xmake/packages/a/asio/1.32.0/c55f2c81d48f4569911343d743fdf596/include", "-o", "build/.objs/test-asio/linux/x86_64/debug/test-asio/asio-nl.cpp.o", "test-asio/asio-nl.cpp"],
   "file": "test-asio/asio-nl.cpp"
 }]

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package testpb;
+//./generator/nanopb_generator -v -I ./wps -D ./wps ./wps/user.proto
+// User 定义了一个用户的基本信息
+message User {
+  int32 id = 1;       // 用户的唯一ID
+  string name = 2 ;    // 用户的姓名
+  string email = 3 ;   // 用户的电子邮件地址
+}

@@ -1,0 +1,6 @@
+# https://jpa.kapsi.fi/nanopb/docs/reference.html#proto-file-options
+
+* max_size:32;
+testpb.User.email max_size:64;
+
+

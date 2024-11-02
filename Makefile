@@ -1,5 +1,5 @@
 obj-m += dxrfs.o
-dxrfs-objs := fs.o super.o inode.o file.o dir.o extent.o
+dxrfs-objs := fs.o super.o inode.o file.o dir.o extent.o pb/pb_common.o pb/pb_encode.o pb/pb_decode.o pb/user.pb.o
 #KVER = '6.8.0-47-generic'
 KVER = $(shell uname -r)
 KDIR ?= /lib/modules/${KVER}/build
@@ -10,7 +10,8 @@ MKFS = mkfs.dxrfs
 # change .o .mod.c .mod.o .ko .mod ... files to ./build directory
 BUILD_DIR := $(PWD)/ko
 BUILD_DIR_MAKEFILE := $(BUILD_DIR)/Makefile
-
+# Add the -DPB_SYSTEM_HEADER flag to CFLAGS
+EXTRA_CFLAGS += -DPB_SYSTEM_HEADER -I$(PWD)/pb
 
 all: $(MKFS) $(BUILD_DIR_MAKEFILE)
 	make -C $(KDIR) M=$(BUILD_DIR) src=$(PWD) modules V=0
