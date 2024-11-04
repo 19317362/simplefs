@@ -2,6 +2,16 @@
 #include <pb_decode.h>
 #include "yw_fpa_common.h"
 
+/**
+ * @brief 解析一个通用的 FPA 命令。
+ * 
+ * 该函数检查提供的字节数组是否包含有效的 FPA 命令头，
+ * 如果头有效，则提取命令 ID。
+ * 
+ * @param str 指向包含命令数据的字节数组的指针。
+ * @param len 字节数组的长度。
+ * @return ywfpa_CmdId 提取的命令 ID，如果头无效则返回 ywfpa_CmdId_CmdNA。
+ */
 ywfpa_CmdId fpa_get_command(const unsigned char *str, int len)
 {
     ywfpa_CmdId cmd_id = ywfpa_CmdId_CmdNA;
@@ -34,12 +44,13 @@ ywfpa_CmdId fpa_get_command(const unsigned char *str, int len)
     return cmd_id;
 }
 
-bool fpa_decode_by_command(const unsigned char *pp_data, int vp_data_len, ywfpa_CmdId vp_cmd_id, void *pp_dest)
+ywfpa_CmdId fpa_decode_auto(const unsigned char *pp_data, int vp_data_len, void *pp_dest)
 {
+    ywfpa_CmdId cmd_id = fpa_get_command(pp_data, vp_data_len);
     pb_istream_t stream = pb_istream_from_buffer(pp_data, vp_data_len);
     bool status = false;
 
-    switch (vp_cmd_id)
+    switch (cmd_id)
     {
         case ywfpa_CmdId_CmdDevAdded:
             status = pb_decode(&stream, ywfpa_DevAdded_fields, pp_dest);
@@ -52,12 +63,13 @@ bool fpa_decode_by_command(const unsigned char *pp_data, int vp_data_len, ywfpa_
             break;
         // Add cases for other command IDs and their corresponding protobuf structures
         default:
-            if (vp_cmd_id >= ywfpa_CmdId_CmdNA && vp_cmd_id <= ywfpa_CmdId_CmdSegmentUpdated)
+            if (cmd_id >= ywfpa_CmdId_CmdNA && cmd_id <= ywfpa_CmdId_CmdSegmentUpdated)
             {
                 status = pb_decode(&stream, ywfpa_CommonMsg_fields, pp_dest);
             }
             break;
     }
 
-    return status;
+    return status ? cmd_id : ywfpa_CmdId_CmdNA;
 }
+

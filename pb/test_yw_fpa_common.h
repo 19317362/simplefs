@@ -65,8 +65,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdAlive);
 
         ywfpa_CommonMsg decoded_msg = ywfpa_CommonMsg_init_zero;
-        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
-        EXPECT_TRUE(status);
+        cmd_id = fpa_decode_auto(buffer, len, &decoded_msg);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdAlive);
         EXPECT_TRUE(decoded_msg.has_cmd_header);
         EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdAlive);
@@ -97,8 +97,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdDevAdded);
 
         ywfpa_DevAdded decoded_msg = ywfpa_DevAdded_init_zero;
-        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
-        EXPECT_TRUE(status);
+        cmd_id = fpa_decode_auto(buffer, len, &decoded_msg);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdDevAdded);
         EXPECT_TRUE(decoded_msg.has_cmd_header);
         EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdDevAdded);
@@ -128,8 +128,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdDevRemoved);
 
         ywfpa_DevRemoved decoded_msg = ywfpa_DevRemoved_init_zero;
-        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
-        EXPECT_TRUE(status);
+        cmd_id = fpa_decode_auto(buffer, len, &decoded_msg);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdDevRemoved);
         EXPECT_TRUE(decoded_msg.has_cmd_header);
         EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdDevRemoved);
@@ -165,8 +165,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdSegmentUpdated);
 
         ywfpa_SegmentUpdated decoded_msg = ywfpa_SegmentUpdated_init_zero;
-        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
-        EXPECT_TRUE(status);
+        cmd_id = fpa_decode_auto(buffer, len, &decoded_msg);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdSegmentUpdated);
         EXPECT_TRUE(decoded_msg.has_cmd_header);
         EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdSegmentUpdated);
