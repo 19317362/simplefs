@@ -1,5 +1,13 @@
 #include "yw_fpa_common.h"
 
+void dump_buffer(const char *title, const uint8_t *buffer, size_t size) {
+    printf("%s:\n", title);
+    for (size_t i = 0; i < size; i++) {
+        printf("%02X ", buffer[i]);
+    }
+    printf("\n");
+}
+
 TEST(FpaParseCommonTest, ValidInput) {
     // Test case 1: Valid input
     // 使用 ywfpa_SegmentUpdated 填充测试数据，序列化数据后，将数据填充到 valid_input 中
@@ -28,22 +36,137 @@ TEST(FpaParseCommonTest, ValidInput) {
     int valid_len = stream.bytes_written;
     printf("valid_len = %d\n", valid_len);
     dump_buffer("fpa_parse_common", buffer, valid_len);    
-    ywfpa_CmdId result = fpa_parse_common(buffer, valid_len);
+    ywfpa_CmdId result = fpa_get_command(buffer, valid_len);
     EXPECT_EQ(result, ywfpa_CmdId_CmdSegmentUpdated);
 }
 
-// TEST(FpaParseCommonTest, InvalidInputEmptyBuffer) {
-//     // Test case 2: Invalid input (empty buffer)
-//     unsigned char invalid_input[] = {};
-//     int invalid_len = sizeof(invalid_input);
-//     ywfpa_CmdId result = fpa_parse_common(invalid_input, invalid_len);
-//     EXPECT_EQ(result, ywfpa_CmdId_CmdNA);
-// }
+TEST(FpaParseCommonTest, TestAllMessages) {
+    // Test ywfpa_CommonMsg
+    {
+        ywfpa_CommonMsg msg = ywfpa_CommonMsg_init_zero;
+        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.cmd_header.cmd = ywfpa_CmdId_CmdAlive;
+        msg.cmd_header.seq = 1;
+        msg.cmd_header.seq_org = 0;
+        msg.cmd_header.rc = 0;
+        msg.param1 = 123;
+        msg.param2 = 456;
 
-// TEST(FpaParseCommonTest, InvalidInputCorruptedData) {
-//     // Test case 3: Invalid input (corrupted data)
-//     unsigned char corrupted_input[] = { /* Add corrupted data here */ };
-//     int corrupted_len = sizeof(corrupted_input);
-//     ywfpa_CmdId result = fpa_parse_common(corrupted_input, corrupted_len);
-//     EXPECT_EQ(result, ywfpa_CmdId_CmdNA);
-// }
+        uint8_t buffer[100];
+        pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+        bool status = pb_encode(&stream, ywfpa_CommonMsg_fields, &msg);
+        EXPECT_TRUE(status);
+
+        int len = stream.bytes_written;
+        dump_buffer("CommonMsg", buffer, len);
+
+        ywfpa_CmdId cmd_id = fpa_get_command(buffer, len);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdAlive);
+
+        ywfpa_CommonMsg decoded_msg = ywfpa_CommonMsg_init_zero;
+        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
+        EXPECT_TRUE(status);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdAlive);
+        EXPECT_EQ(decoded_msg.param1, 123);
+        EXPECT_EQ(decoded_msg.param2, 456);
+    }
+
+    // Test ywfpa_DevAdded
+    {
+        ywfpa_DevAdded msg = ywfpa_DevAdded_init_zero;
+        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.cmd_header.cmd = ywfpa_CmdId_CmdDevAdded;
+        msg.cmd_header.seq = 1;
+        msg.cmd_header.seq_org = 0;
+        msg.cmd_header.rc = 0;
+        msg.dev_id = 12345;
+
+        uint8_t buffer[100];
+        pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+        bool status = pb_encode(&stream, ywfpa_DevAdded_fields, &msg);
+        EXPECT_TRUE(status);
+
+        int len = stream.bytes_written;
+        dump_buffer("DevAdded", buffer, len);
+
+        ywfpa_CmdId cmd_id = fpa_get_command(buffer, len);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdDevAdded);
+
+        ywfpa_DevAdded decoded_msg = ywfpa_DevAdded_init_zero;
+        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
+        EXPECT_TRUE(status);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdDevAdded);
+        EXPECT_EQ(decoded_msg.dev_id, 12345);
+    }
+
+    // Test ywfpa_DevRemoved
+    {
+        ywfpa_DevRemoved msg = ywfpa_DevRemoved_init_zero;
+        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.cmd_header.cmd = ywfpa_CmdId_CmdDevRemoved;
+        msg.cmd_header.seq = 1;
+        msg.cmd_header.seq_org = 0;
+        msg.cmd_header.rc = 0;
+        msg.dev_id = 12345;
+
+        uint8_t buffer[100];
+        pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+        bool status = pb_encode(&stream, ywfpa_DevRemoved_fields, &msg);
+        EXPECT_TRUE(status);
+
+        int len = stream.bytes_written;
+        dump_buffer("DevRemoved", buffer, len);
+
+        ywfpa_CmdId cmd_id = fpa_get_command(buffer, len);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdDevRemoved);
+
+        ywfpa_DevRemoved decoded_msg = ywfpa_DevRemoved_init_zero;
+        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
+        EXPECT_TRUE(status);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdDevRemoved);
+        EXPECT_EQ(decoded_msg.dev_id, 12345);
+    }
+
+    // Test ywfpa_SegmentUpdated
+    {
+        ywfpa_SegmentUpdated msg = ywfpa_SegmentUpdated_init_zero;
+        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.cmd_header.cmd = ywfpa_CmdId_CmdSegmentUpdated;
+        msg.cmd_header.seq = 1;
+        msg.cmd_header.seq_org = 0;
+        msg.cmd_header.rc = 0;
+        msg.has_seg_info = true;
+        msg.seg_info.dev_id = 12345;
+        msg.seg_info.seg_id = 67890;
+        msg.seg_info.begin_time = 1609459200; // 2021-01-01 00:00:00 UTC
+        msg.seg_info.end_time = 1609462800; // 2021-01-01 01:00:00 UTC
+        msg.seg_info.media_type_mask = 0xFF;
+        msg.seg_info.ch_mask = 0xFF;
+
+        uint8_t buffer[100];
+        pb_ostream_t stream = pb_ostream_from_buffer(buffer, sizeof(buffer));
+        bool status = pb_encode(&stream, ywfpa_SegmentUpdated_fields, &msg);
+        EXPECT_TRUE(status);
+
+        int len = stream.bytes_written;
+        dump_buffer("SegmentUpdated", buffer, len);
+
+        ywfpa_CmdId cmd_id = fpa_get_command(buffer, len);
+        EXPECT_EQ(cmd_id, ywfpa_CmdId_CmdSegmentUpdated);
+
+        ywfpa_SegmentUpdated decoded_msg = ywfpa_SegmentUpdated_init_zero;
+        status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
+        EXPECT_TRUE(status);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdSegmentUpdated);
+        EXPECT_EQ(decoded_msg.seg_info.dev_id, 12345);
+        EXPECT_EQ(decoded_msg.seg_info.seg_id, 67890);
+        EXPECT_EQ(decoded_msg.seg_info.begin_time, 1609459200);
+        EXPECT_EQ(decoded_msg.seg_info.end_time, 1609462800);
+        EXPECT_EQ(decoded_msg.seg_info.media_type_mask, 0xFF);
+        EXPECT_EQ(decoded_msg.seg_info.ch_mask, 0xFF);
+    }
+}

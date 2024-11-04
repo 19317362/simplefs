@@ -17,15 +17,20 @@ message PkgHeader {
 enum CmdId {
   //-- 系统组 和TF卡无关命令
   CmdNA = 0;     // 无效命令
-  CmdAlive = 1;  // 心跳
-  CmdStart = 2;  // 开始
-  CmdExit = 3;   // 退出
+  CmdAlive = 1;  // 心跳 CommonMsg
+  CmdStart = 2;  // 开始 CommonMsg
+  CmdExit = 3;   // 退出 CommonMsg
   //-- 媒体组 和TF卡有关命令
   CmdDevAdded = 4; // 设备初始化
   CmdDevRemoved = 5;  // 设备移除
   CmdSegmentUpdated = 6;  // 媒体段信息 -- 更新
 }
-
+// 通用消息 -- 包含 Header 消息 -- 参数1,2
+message CommonMsg {
+  PkgHeader cmd_header = 1;  // 包含 Header 消息
+  uint32 param1 = 2;  // 参数1
+  uint32 param2 = 3;  // 参数2
+}
 // 设备消息 -- 设备初始化
 message DevAdded {
   PkgHeader cmd_header = 1;  // 包含 Header 消息

@@ -14,9 +14,9 @@
 typedef enum _ywfpa_CmdId {
     /* -- 系统组 和TF卡无关命令 */
     ywfpa_CmdId_CmdNA = 0, /* 无效命令 */
-    ywfpa_CmdId_CmdAlive = 1, /* 心跳 */
-    ywfpa_CmdId_CmdStart = 2, /* 开始 */
-    ywfpa_CmdId_CmdExit = 3, /* 退出 */
+    ywfpa_CmdId_CmdAlive = 1, /* 心跳 CommonMsg */
+    ywfpa_CmdId_CmdStart = 2, /* 开始 CommonMsg */
+    ywfpa_CmdId_CmdExit = 3, /* 退出 CommonMsg */
     /* -- 媒体组 和TF卡有关命令 */
     ywfpa_CmdId_CmdDevAdded = 4, /* 设备初始化 */
     ywfpa_CmdId_CmdDevRemoved = 5, /* 设备移除 */
@@ -35,6 +35,14 @@ typedef struct _ywfpa_PkgHeader {
     int32_t rc; /* 返回码 0:成功，<0:失败, >0: 表示数量 */
     uint32_t context; /* 上下文信息 -- 接收方原样返回 */
 } ywfpa_PkgHeader;
+
+/* 通用消息 -- 包含 Header 消息 -- 参数1,2 */
+typedef struct _ywfpa_CommonMsg {
+    bool has_cmd_header;
+    ywfpa_PkgHeader cmd_header; /* 包含 Header 消息 */
+    uint32_t param1; /* 参数1 */
+    uint32_t param2; /* 参数2 */
+} ywfpa_CommonMsg;
 
 /* 设备消息 -- 设备初始化 */
 typedef struct _ywfpa_DevAdded {
@@ -84,13 +92,16 @@ extern "C" {
 
 
 
+
 /* Initializer values for message structs */
 #define ywfpa_PkgHeader_init_default             {0, 0, 0, 0, 0, 0}
+#define ywfpa_CommonMsg_init_default             {false, ywfpa_PkgHeader_init_default, 0, 0}
 #define ywfpa_DevAdded_init_default              {false, ywfpa_PkgHeader_init_default, 0}
 #define ywfpa_DevRemoved_init_default            {false, ywfpa_PkgHeader_init_default, 0}
 #define ywfpa_SegmentInfo_init_default           {0, 0, 0, 0, 0, 0}
 #define ywfpa_SegmentUpdated_init_default        {false, ywfpa_PkgHeader_init_default, false, ywfpa_SegmentInfo_init_default}
 #define ywfpa_PkgHeader_init_zero                {0, 0, 0, 0, 0, 0}
+#define ywfpa_CommonMsg_init_zero                {false, ywfpa_PkgHeader_init_zero, 0, 0}
 #define ywfpa_DevAdded_init_zero                 {false, ywfpa_PkgHeader_init_zero, 0}
 #define ywfpa_DevRemoved_init_zero               {false, ywfpa_PkgHeader_init_zero, 0}
 #define ywfpa_SegmentInfo_init_zero              {0, 0, 0, 0, 0, 0}
@@ -103,6 +114,9 @@ extern "C" {
 #define ywfpa_PkgHeader_seq_org_tag              4
 #define ywfpa_PkgHeader_rc_tag                   5
 #define ywfpa_PkgHeader_context_tag              6
+#define ywfpa_CommonMsg_cmd_header_tag           1
+#define ywfpa_CommonMsg_param1_tag               2
+#define ywfpa_CommonMsg_param2_tag               3
 #define ywfpa_DevAdded_cmd_header_tag            1
 #define ywfpa_DevAdded_dev_id_tag                2
 #define ywfpa_DevRemoved_cmd_header_tag          1
@@ -126,6 +140,14 @@ X(a, STATIC,   SINGULAR, INT32,    rc,                5) \
 X(a, STATIC,   SINGULAR, UINT32,   context,           6)
 #define ywfpa_PkgHeader_CALLBACK NULL
 #define ywfpa_PkgHeader_DEFAULT NULL
+
+#define ywfpa_CommonMsg_FIELDLIST(X, a) \
+X(a, STATIC,   OPTIONAL, MESSAGE,  cmd_header,        1) \
+X(a, STATIC,   SINGULAR, UINT32,   param1,            2) \
+X(a, STATIC,   SINGULAR, UINT32,   param2,            3)
+#define ywfpa_CommonMsg_CALLBACK NULL
+#define ywfpa_CommonMsg_DEFAULT NULL
+#define ywfpa_CommonMsg_cmd_header_MSGTYPE ywfpa_PkgHeader
 
 #define ywfpa_DevAdded_FIELDLIST(X, a) \
 X(a, STATIC,   OPTIONAL, MESSAGE,  cmd_header,        1) \
@@ -160,6 +182,7 @@ X(a, STATIC,   OPTIONAL, MESSAGE,  seg_info,          2)
 #define ywfpa_SegmentUpdated_seg_info_MSGTYPE ywfpa_SegmentInfo
 
 extern const pb_msgdesc_t ywfpa_PkgHeader_msg;
+extern const pb_msgdesc_t ywfpa_CommonMsg_msg;
 extern const pb_msgdesc_t ywfpa_DevAdded_msg;
 extern const pb_msgdesc_t ywfpa_DevRemoved_msg;
 extern const pb_msgdesc_t ywfpa_SegmentInfo_msg;
@@ -167,6 +190,7 @@ extern const pb_msgdesc_t ywfpa_SegmentUpdated_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define ywfpa_PkgHeader_fields &ywfpa_PkgHeader_msg
+#define ywfpa_CommonMsg_fields &ywfpa_CommonMsg_msg
 #define ywfpa_DevAdded_fields &ywfpa_DevAdded_msg
 #define ywfpa_DevRemoved_fields &ywfpa_DevRemoved_msg
 #define ywfpa_SegmentInfo_fields &ywfpa_SegmentInfo_msg
@@ -174,6 +198,7 @@ extern const pb_msgdesc_t ywfpa_SegmentUpdated_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define YWFPA_YW_FPA_PB_H_MAX_SIZE               ywfpa_SegmentUpdated_size
+#define ywfpa_CommonMsg_size                     53
 #define ywfpa_DevAdded_size                      47
 #define ywfpa_DevRemoved_size                    47
 #define ywfpa_PkgHeader_size                     39
