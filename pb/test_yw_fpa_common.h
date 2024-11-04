@@ -1,4 +1,3 @@
-
 #include "yw_fpa_common.h"
 
 TEST(FpaParseCommonTest, ValidInput) {
@@ -8,8 +7,6 @@ TEST(FpaParseCommonTest, ValidInput) {
     segment_updated.has_cmd_header = true;
     segment_updated.cmd_header.magic = 0xFEADBEEF;
     segment_updated.cmd_header.cmd = ywfpa_CmdId_CmdSegmentUpdated;
-    segment_updated.cmd_header.length = 100;
-    segment_updated.cmd_header.length_org = 120;
     segment_updated.cmd_header.seq = 1;
     segment_updated.cmd_header.seq_org = 0;
     segment_updated.cmd_header.rc = 0;

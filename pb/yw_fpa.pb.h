@@ -30,11 +30,10 @@ FPA => KO
 typedef struct _ywfpa_PkgHeader {
     uint32_t magic; /* 魔数 0xFEADBEEF */
     uint32_t cmd; /* 命令号 -- 用于区分不同的消息 */
-    uint32_t length; /* 数据长度 -- 序列化后的长度 */
-    uint32_t length_org; /* 序列化前的长度 */
     uint32_t seq; /* 发起方的 序列号 --- 非0 */
     uint32_t seq_org; /* 应答时，对应应答的 原 序列号 --- 非0 是原请求的 seq. 0 表示不是应答，是请求 */
     int32_t rc; /* 返回码 0:成功，<0:失败, >0: 表示数量 */
+    uint32_t context; /* 上下文信息 -- 接收方原样返回 */
 } ywfpa_PkgHeader;
 
 /* 设备消息 -- 设备初始化 */
@@ -86,12 +85,12 @@ extern "C" {
 
 
 /* Initializer values for message structs */
-#define ywfpa_PkgHeader_init_default             {0, 0, 0, 0, 0, 0, 0}
+#define ywfpa_PkgHeader_init_default             {0, 0, 0, 0, 0, 0}
 #define ywfpa_DevAdded_init_default              {false, ywfpa_PkgHeader_init_default, 0}
 #define ywfpa_DevRemoved_init_default            {false, ywfpa_PkgHeader_init_default, 0}
 #define ywfpa_SegmentInfo_init_default           {0, 0, 0, 0, 0, 0}
 #define ywfpa_SegmentUpdated_init_default        {false, ywfpa_PkgHeader_init_default, false, ywfpa_SegmentInfo_init_default}
-#define ywfpa_PkgHeader_init_zero                {0, 0, 0, 0, 0, 0, 0}
+#define ywfpa_PkgHeader_init_zero                {0, 0, 0, 0, 0, 0}
 #define ywfpa_DevAdded_init_zero                 {false, ywfpa_PkgHeader_init_zero, 0}
 #define ywfpa_DevRemoved_init_zero               {false, ywfpa_PkgHeader_init_zero, 0}
 #define ywfpa_SegmentInfo_init_zero              {0, 0, 0, 0, 0, 0}
@@ -100,11 +99,10 @@ extern "C" {
 /* Field tags (for use in manual encoding/decoding) */
 #define ywfpa_PkgHeader_magic_tag                1
 #define ywfpa_PkgHeader_cmd_tag                  2
-#define ywfpa_PkgHeader_length_tag               3
-#define ywfpa_PkgHeader_length_org_tag           4
-#define ywfpa_PkgHeader_seq_tag                  5
-#define ywfpa_PkgHeader_seq_org_tag              6
-#define ywfpa_PkgHeader_rc_tag                   7
+#define ywfpa_PkgHeader_seq_tag                  3
+#define ywfpa_PkgHeader_seq_org_tag              4
+#define ywfpa_PkgHeader_rc_tag                   5
+#define ywfpa_PkgHeader_context_tag              6
 #define ywfpa_DevAdded_cmd_header_tag            1
 #define ywfpa_DevAdded_dev_id_tag                2
 #define ywfpa_DevRemoved_cmd_header_tag          1
@@ -122,11 +120,10 @@ extern "C" {
 #define ywfpa_PkgHeader_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, FIXED32,  magic,             1) \
 X(a, STATIC,   SINGULAR, FIXED32,  cmd,               2) \
-X(a, STATIC,   SINGULAR, FIXED32,  length,            3) \
-X(a, STATIC,   SINGULAR, FIXED32,  length_org,        4) \
-X(a, STATIC,   SINGULAR, UINT32,   seq,               5) \
-X(a, STATIC,   SINGULAR, UINT32,   seq_org,           6) \
-X(a, STATIC,   SINGULAR, INT32,    rc,                7)
+X(a, STATIC,   SINGULAR, UINT32,   seq,               3) \
+X(a, STATIC,   SINGULAR, UINT32,   seq_org,           4) \
+X(a, STATIC,   SINGULAR, INT32,    rc,                5) \
+X(a, STATIC,   SINGULAR, UINT32,   context,           6)
 #define ywfpa_PkgHeader_CALLBACK NULL
 #define ywfpa_PkgHeader_DEFAULT NULL
 
@@ -177,11 +174,11 @@ extern const pb_msgdesc_t ywfpa_SegmentUpdated_msg;
 
 /* Maximum encoded size of messages (where known) */
 #define YWFPA_YW_FPA_PB_H_MAX_SIZE               ywfpa_SegmentUpdated_size
-#define ywfpa_DevAdded_size                      51
-#define ywfpa_DevRemoved_size                    51
-#define ywfpa_PkgHeader_size                     43
+#define ywfpa_DevAdded_size                      47
+#define ywfpa_DevRemoved_size                    47
+#define ywfpa_PkgHeader_size                     39
 #define ywfpa_SegmentInfo_size                   36
-#define ywfpa_SegmentUpdated_size                83
+#define ywfpa_SegmentUpdated_size                79
 
 #ifdef __cplusplus
 } /* extern "C" */

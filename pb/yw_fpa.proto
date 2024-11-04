@@ -7,11 +7,10 @@ package ywfpa;
 message PkgHeader {
   fixed32 magic = 1;   // 魔数 0xFEADBEEF
   fixed32 cmd = 2;     // 命令号 -- 用于区分不同的消息
-  fixed32 length = 3;  // 数据长度 -- 序列化后的长度
-  fixed32 length_org = 4;     // 序列化前的长度
-  uint32 seq = 5;    // 发起方的 序列号 --- 非0
-  uint32 seq_org = 6;    // 应答时，对应应答的 原 序列号 --- 非0 是原请求的 seq. 0 表示不是应答，是请求
-  int32 rc = 7;     // 返回码 0:成功，<0:失败, >0: 表示数量  
+  uint32 seq = 3;    // 发起方的 序列号 --- 非0
+  uint32 seq_org = 4;    // 应答时，对应应答的 原 序列号 --- 非0 是原请求的 seq. 0 表示不是应答，是请求
+  int32 rc = 5;     // 返回码 0:成功，<0:失败, >0: 表示数量  
+  uint32 context = 6;  // 上下文信息 -- 接收方原样返回
 }
 
 // 命令号 -- 用于区分不同的消息
