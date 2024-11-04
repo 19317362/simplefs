@@ -2,13 +2,10 @@
 #include <pb_decode.h>
 #include "yw_fpa_common.h"
 
-
-
-
 ywfpa_CmdId fpa_get_command(const unsigned char *str, int len)
 {
     ywfpa_CmdId cmd_id = ywfpa_CmdId_CmdNA;
-    if(len >= ywfpa_PkgHeader_size)
+    if(len > 12)
     {
         //0A 16 0D EF BE AD FE 15 06 00 00 00
         //0A 16 0D EF BE AD FE 15 04 00 00 00
@@ -19,7 +16,9 @@ ywfpa_CmdId fpa_get_command(const unsigned char *str, int len)
             str[4] == 0xBE && str[5] == 0xAD && str[6] == 0xFE && str[7] == 0x15)
         {
             //从第8个字节取4个字节则是命令ID
-            cmd_id = (ywfpa_CmdId)str[8];
+            uint32_t cmd_id_raw = 0;
+            memcpy(&cmd_id_raw, str+8, sizeof(cmd_id_raw));
+            cmd_id = (ywfpa_CmdId)cmd_id_raw;
             
             //增加对命令ID值的有效性判断
             if (cmd_id >= ywfpa_CmdId_CmdNA && cmd_id <= ywfpa_CmdId_CmdSegmentUpdated)
@@ -28,15 +27,9 @@ ywfpa_CmdId fpa_get_command(const unsigned char *str, int len)
             }
             else
             {
-                printf("invalid cmd_id %d\n",cmd_id);
                 cmd_id = ywfpa_CmdId_CmdNA;
             }
         }
-        else
-        {
-            printf("invalid header\n");
-        }
-
     }
     return cmd_id;
 }

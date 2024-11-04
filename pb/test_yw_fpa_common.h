@@ -13,7 +13,7 @@ TEST(FpaParseCommonTest, ValidInput) {
     // 使用 ywfpa_SegmentUpdated 填充测试数据，序列化数据后，将数据填充到 valid_input 中
     ywfpa_SegmentUpdated segment_updated;
     segment_updated.has_cmd_header = true;
-    segment_updated.cmd_header.magic = 0xFEADBEEF;
+    segment_updated.cmd_header.magic = YWFPA_CMD_HEADER_MAGIC;
     segment_updated.cmd_header.cmd = ywfpa_CmdId_CmdSegmentUpdated;
     segment_updated.cmd_header.seq = 1;
     segment_updated.cmd_header.seq_org = 0;
@@ -44,7 +44,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
     // Test ywfpa_CommonMsg
     {
         ywfpa_CommonMsg msg = ywfpa_CommonMsg_init_zero;
-        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.has_cmd_header = true;
+        msg.cmd_header.magic = YWFPA_CMD_HEADER_MAGIC;
         msg.cmd_header.cmd = ywfpa_CmdId_CmdAlive;
         msg.cmd_header.seq = 1;
         msg.cmd_header.seq_org = 0;
@@ -66,7 +67,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         ywfpa_CommonMsg decoded_msg = ywfpa_CommonMsg_init_zero;
         status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
         EXPECT_TRUE(status);
-        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_TRUE(decoded_msg.has_cmd_header);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdAlive);
         EXPECT_EQ(decoded_msg.param1, 123);
         EXPECT_EQ(decoded_msg.param2, 456);
@@ -75,7 +77,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
     // Test ywfpa_DevAdded
     {
         ywfpa_DevAdded msg = ywfpa_DevAdded_init_zero;
-        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.has_cmd_header = true;
+        msg.cmd_header.magic = YWFPA_CMD_HEADER_MAGIC;
         msg.cmd_header.cmd = ywfpa_CmdId_CmdDevAdded;
         msg.cmd_header.seq = 1;
         msg.cmd_header.seq_org = 0;
@@ -96,7 +99,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         ywfpa_DevAdded decoded_msg = ywfpa_DevAdded_init_zero;
         status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
         EXPECT_TRUE(status);
-        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_TRUE(decoded_msg.has_cmd_header);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdDevAdded);
         EXPECT_EQ(decoded_msg.dev_id, 12345);
     }
@@ -104,7 +108,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
     // Test ywfpa_DevRemoved
     {
         ywfpa_DevRemoved msg = ywfpa_DevRemoved_init_zero;
-        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.has_cmd_header = true;
+        msg.cmd_header.magic = YWFPA_CMD_HEADER_MAGIC;
         msg.cmd_header.cmd = ywfpa_CmdId_CmdDevRemoved;
         msg.cmd_header.seq = 1;
         msg.cmd_header.seq_org = 0;
@@ -125,7 +130,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         ywfpa_DevRemoved decoded_msg = ywfpa_DevRemoved_init_zero;
         status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
         EXPECT_TRUE(status);
-        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_TRUE(decoded_msg.has_cmd_header);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdDevRemoved);
         EXPECT_EQ(decoded_msg.dev_id, 12345);
     }
@@ -133,7 +139,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
     // Test ywfpa_SegmentUpdated
     {
         ywfpa_SegmentUpdated msg = ywfpa_SegmentUpdated_init_zero;
-        msg.cmd_header.magic = 0xFEADBEEF;
+        msg.has_cmd_header = true;
+        msg.cmd_header.magic = YWFPA_CMD_HEADER_MAGIC;
         msg.cmd_header.cmd = ywfpa_CmdId_CmdSegmentUpdated;
         msg.cmd_header.seq = 1;
         msg.cmd_header.seq_org = 0;
@@ -160,7 +167,8 @@ TEST(FpaParseCommonTest, TestAllMessages) {
         ywfpa_SegmentUpdated decoded_msg = ywfpa_SegmentUpdated_init_zero;
         status = fpa_decode_by_command(buffer, len, cmd_id, &decoded_msg);
         EXPECT_TRUE(status);
-        EXPECT_EQ(decoded_msg.cmd_header.magic, 0xFEADBEEF);
+        EXPECT_TRUE(decoded_msg.has_cmd_header);
+        EXPECT_EQ(decoded_msg.cmd_header.magic, YWFPA_CMD_HEADER_MAGIC);
         EXPECT_EQ(decoded_msg.cmd_header.cmd, ywfpa_CmdId_CmdSegmentUpdated);
         EXPECT_EQ(decoded_msg.seg_info.dev_id, 12345);
         EXPECT_EQ(decoded_msg.seg_info.seg_id, 67890);
